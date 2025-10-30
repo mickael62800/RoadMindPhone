@@ -3,10 +3,21 @@
 // Do not manually edit this file.
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
-import 'dart:async' as _i6;
+import 'dart:async' as _i10;
+import 'dart:math' as _i13;
 
+import 'package:camera_platform_interface/camera_platform_interface.dart'
+    as _i6;
+import 'package:flutter/services.dart' as _i8;
+import 'package:flutter/widgets.dart' as _i7;
+import 'package:geolocator_platform_interface/src/enums/enums.dart' as _i12;
+import 'package:geolocator_platform_interface/src/geolocator_platform_interface.dart'
+    as _i11;
+import 'package:geolocator_platform_interface/src/models/models.dart' as _i5;
 import 'package:mockito/mockito.dart' as _i1;
-import 'package:roadmindphone/database_helper.dart' as _i5;
+import 'package:permission_handler_platform_interface/permission_handler_platform_interface.dart'
+    as _i14;
+import 'package:roadmindphone/database_helper.dart' as _i9;
 import 'package:roadmindphone/main.dart' as _i3;
 import 'package:roadmindphone/project_index_page.dart' as _i4;
 import 'package:sqflite/sqflite.dart' as _i2;
@@ -40,110 +51,718 @@ class _FakeSession_2 extends _i1.SmartFake implements _i4.Session {
     : super(parent, parentInvocation);
 }
 
+class _FakePosition_3 extends _i1.SmartFake implements _i5.Position {
+  _FakePosition_3(Object parent, Invocation parentInvocation)
+    : super(parent, parentInvocation);
+}
+
+class _FakeXFile_4 extends _i1.SmartFake implements _i6.XFile {
+  _FakeXFile_4(Object parent, Invocation parentInvocation)
+    : super(parent, parentInvocation);
+}
+
+class _FakeWidget_5 extends _i1.SmartFake implements _i7.Widget {
+  _FakeWidget_5(Object parent, Invocation parentInvocation)
+    : super(parent, parentInvocation);
+
+  @override
+  String toString({_i8.DiagnosticLevel? minLevel = _i8.DiagnosticLevel.info}) =>
+      super.toString();
+}
+
 /// A class which mocks [DatabaseHelper].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockDatabaseHelper extends _i1.Mock implements _i5.DatabaseHelper {
+class MockDatabaseHelper extends _i1.Mock implements _i9.DatabaseHelper {
   MockDatabaseHelper() {
     _i1.throwOnMissingStub(this);
   }
 
   @override
-  _i6.Future<_i2.Database> get database =>
+  _i10.Future<_i2.Database> get database =>
       (super.noSuchMethod(
             Invocation.getter(#database),
-            returnValue: _i6.Future<_i2.Database>.value(
+            returnValue: _i10.Future<_i2.Database>.value(
               _FakeDatabase_0(this, Invocation.getter(#database)),
             ),
           )
-          as _i6.Future<_i2.Database>);
+          as _i10.Future<_i2.Database>);
 
   @override
-  _i6.Future<_i3.Project> create(_i3.Project? project) =>
+  _i10.Future<_i3.Project> create(_i3.Project? project) =>
       (super.noSuchMethod(
             Invocation.method(#create, [project]),
-            returnValue: _i6.Future<_i3.Project>.value(
+            returnValue: _i10.Future<_i3.Project>.value(
               _FakeProject_1(this, Invocation.method(#create, [project])),
             ),
           )
-          as _i6.Future<_i3.Project>);
+          as _i10.Future<_i3.Project>);
 
   @override
-  _i6.Future<_i4.Session> createSession(_i4.Session? session) =>
+  _i10.Future<_i4.Session> createSession(_i4.Session? session) =>
       (super.noSuchMethod(
             Invocation.method(#createSession, [session]),
-            returnValue: _i6.Future<_i4.Session>.value(
+            returnValue: _i10.Future<_i4.Session>.value(
               _FakeSession_2(
                 this,
                 Invocation.method(#createSession, [session]),
               ),
             ),
           )
-          as _i6.Future<_i4.Session>);
+          as _i10.Future<_i4.Session>);
 
   @override
-  _i6.Future<_i3.Project> readProject(int? id) =>
+  _i10.Future<_i3.Project> readProject(int? id) =>
       (super.noSuchMethod(
             Invocation.method(#readProject, [id]),
-            returnValue: _i6.Future<_i3.Project>.value(
+            returnValue: _i10.Future<_i3.Project>.value(
               _FakeProject_1(this, Invocation.method(#readProject, [id])),
             ),
           )
-          as _i6.Future<_i3.Project>);
+          as _i10.Future<_i3.Project>);
 
   @override
-  _i6.Future<List<_i3.Project>> readAllProjects() =>
+  _i10.Future<_i4.Session> readSession(int? id) =>
+      (super.noSuchMethod(
+            Invocation.method(#readSession, [id]),
+            returnValue: _i10.Future<_i4.Session>.value(
+              _FakeSession_2(this, Invocation.method(#readSession, [id])),
+            ),
+          )
+          as _i10.Future<_i4.Session>);
+
+  @override
+  _i10.Future<List<_i3.Project>> readAllProjects() =>
       (super.noSuchMethod(
             Invocation.method(#readAllProjects, []),
-            returnValue: _i6.Future<List<_i3.Project>>.value(<_i3.Project>[]),
+            returnValue: _i10.Future<List<_i3.Project>>.value(<_i3.Project>[]),
           )
-          as _i6.Future<List<_i3.Project>>);
+          as _i10.Future<List<_i3.Project>>);
 
   @override
-  _i6.Future<List<_i4.Session>> readAllSessionsForProject(int? projectId) =>
+  _i10.Future<List<_i4.Session>> readAllSessionsForProject(int? projectId) =>
       (super.noSuchMethod(
             Invocation.method(#readAllSessionsForProject, [projectId]),
-            returnValue: _i6.Future<List<_i4.Session>>.value(<_i4.Session>[]),
+            returnValue: _i10.Future<List<_i4.Session>>.value(<_i4.Session>[]),
           )
-          as _i6.Future<List<_i4.Session>>);
+          as _i10.Future<List<_i4.Session>>);
 
   @override
-  _i6.Future<int> update(_i3.Project? project) =>
+  _i10.Future<int> update(_i3.Project? project) =>
       (super.noSuchMethod(
             Invocation.method(#update, [project]),
-            returnValue: _i6.Future<int>.value(0),
+            returnValue: _i10.Future<int>.value(0),
           )
-          as _i6.Future<int>);
+          as _i10.Future<int>);
 
   @override
-  _i6.Future<int> updateSession(_i4.Session? session) =>
+  _i10.Future<int> updateSession(_i4.Session? session) =>
       (super.noSuchMethod(
             Invocation.method(#updateSession, [session]),
-            returnValue: _i6.Future<int>.value(0),
+            returnValue: _i10.Future<int>.value(0),
           )
-          as _i6.Future<int>);
+          as _i10.Future<int>);
 
   @override
-  _i6.Future<int> delete(int? id) =>
+  _i10.Future<int> delete(int? id) =>
       (super.noSuchMethod(
             Invocation.method(#delete, [id]),
-            returnValue: _i6.Future<int>.value(0),
+            returnValue: _i10.Future<int>.value(0),
           )
-          as _i6.Future<int>);
+          as _i10.Future<int>);
 
   @override
-  _i6.Future<int> deleteSession(int? id) =>
+  _i10.Future<int> deleteSession(int? id) =>
       (super.noSuchMethod(
             Invocation.method(#deleteSession, [id]),
-            returnValue: _i6.Future<int>.value(0),
+            returnValue: _i10.Future<int>.value(0),
           )
-          as _i6.Future<int>);
+          as _i10.Future<int>);
 
   @override
-  _i6.Future<dynamic> close() =>
+  _i10.Future<dynamic> close() =>
       (super.noSuchMethod(
             Invocation.method(#close, []),
-            returnValue: _i6.Future<dynamic>.value(),
+            returnValue: _i10.Future<dynamic>.value(),
           )
-          as _i6.Future<dynamic>);
+          as _i10.Future<dynamic>);
+}
+
+/// A class which mocks [GeolocatorPlatform].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockGeolocatorPlatform extends _i1.Mock
+    implements _i11.GeolocatorPlatform {
+  MockGeolocatorPlatform() {
+    _i1.throwOnMissingStub(this);
+  }
+
+  @override
+  _i10.Future<_i12.LocationPermission> checkPermission() =>
+      (super.noSuchMethod(
+            Invocation.method(#checkPermission, []),
+            returnValue: _i10.Future<_i12.LocationPermission>.value(
+              _i12.LocationPermission.denied,
+            ),
+          )
+          as _i10.Future<_i12.LocationPermission>);
+
+  @override
+  _i10.Future<_i12.LocationPermission> requestPermission() =>
+      (super.noSuchMethod(
+            Invocation.method(#requestPermission, []),
+            returnValue: _i10.Future<_i12.LocationPermission>.value(
+              _i12.LocationPermission.denied,
+            ),
+          )
+          as _i10.Future<_i12.LocationPermission>);
+
+  @override
+  _i10.Future<bool> isLocationServiceEnabled() =>
+      (super.noSuchMethod(
+            Invocation.method(#isLocationServiceEnabled, []),
+            returnValue: _i10.Future<bool>.value(false),
+          )
+          as _i10.Future<bool>);
+
+  @override
+  _i10.Future<_i5.Position?> getLastKnownPosition({
+    bool? forceLocationManager = false,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(#getLastKnownPosition, [], {
+              #forceLocationManager: forceLocationManager,
+            }),
+            returnValue: _i10.Future<_i5.Position?>.value(),
+          )
+          as _i10.Future<_i5.Position?>);
+
+  @override
+  _i10.Future<_i5.Position> getCurrentPosition({
+    _i5.LocationSettings? locationSettings,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(#getCurrentPosition, [], {
+              #locationSettings: locationSettings,
+            }),
+            returnValue: _i10.Future<_i5.Position>.value(
+              _FakePosition_3(
+                this,
+                Invocation.method(#getCurrentPosition, [], {
+                  #locationSettings: locationSettings,
+                }),
+              ),
+            ),
+          )
+          as _i10.Future<_i5.Position>);
+
+  @override
+  _i10.Stream<_i12.ServiceStatus> getServiceStatusStream() =>
+      (super.noSuchMethod(
+            Invocation.method(#getServiceStatusStream, []),
+            returnValue: _i10.Stream<_i12.ServiceStatus>.empty(),
+          )
+          as _i10.Stream<_i12.ServiceStatus>);
+
+  @override
+  _i10.Stream<_i5.Position> getPositionStream({
+    _i5.LocationSettings? locationSettings,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(#getPositionStream, [], {
+              #locationSettings: locationSettings,
+            }),
+            returnValue: _i10.Stream<_i5.Position>.empty(),
+          )
+          as _i10.Stream<_i5.Position>);
+
+  @override
+  _i10.Future<_i12.LocationAccuracyStatus> requestTemporaryFullAccuracy({
+    required String? purposeKey,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(#requestTemporaryFullAccuracy, [], {
+              #purposeKey: purposeKey,
+            }),
+            returnValue: _i10.Future<_i12.LocationAccuracyStatus>.value(
+              _i12.LocationAccuracyStatus.reduced,
+            ),
+          )
+          as _i10.Future<_i12.LocationAccuracyStatus>);
+
+  @override
+  _i10.Future<_i12.LocationAccuracyStatus> getLocationAccuracy() =>
+      (super.noSuchMethod(
+            Invocation.method(#getLocationAccuracy, []),
+            returnValue: _i10.Future<_i12.LocationAccuracyStatus>.value(
+              _i12.LocationAccuracyStatus.reduced,
+            ),
+          )
+          as _i10.Future<_i12.LocationAccuracyStatus>);
+
+  @override
+  _i10.Future<bool> openAppSettings() =>
+      (super.noSuchMethod(
+            Invocation.method(#openAppSettings, []),
+            returnValue: _i10.Future<bool>.value(false),
+          )
+          as _i10.Future<bool>);
+
+  @override
+  _i10.Future<bool> openLocationSettings() =>
+      (super.noSuchMethod(
+            Invocation.method(#openLocationSettings, []),
+            returnValue: _i10.Future<bool>.value(false),
+          )
+          as _i10.Future<bool>);
+
+  @override
+  double distanceBetween(
+    double? startLatitude,
+    double? startLongitude,
+    double? endLatitude,
+    double? endLongitude,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#distanceBetween, [
+              startLatitude,
+              startLongitude,
+              endLatitude,
+              endLongitude,
+            ]),
+            returnValue: 0.0,
+          )
+          as double);
+
+  @override
+  double bearingBetween(
+    double? startLatitude,
+    double? startLongitude,
+    double? endLatitude,
+    double? endLongitude,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#bearingBetween, [
+              startLatitude,
+              startLongitude,
+              endLatitude,
+              endLongitude,
+            ]),
+            returnValue: 0.0,
+          )
+          as double);
+}
+
+/// A class which mocks [CameraPlatform].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockCameraPlatform extends _i1.Mock implements _i6.CameraPlatform {
+  MockCameraPlatform() {
+    _i1.throwOnMissingStub(this);
+  }
+
+  @override
+  _i10.Future<List<_i6.CameraDescription>> availableCameras() =>
+      (super.noSuchMethod(
+            Invocation.method(#availableCameras, []),
+            returnValue: _i10.Future<List<_i6.CameraDescription>>.value(
+              <_i6.CameraDescription>[],
+            ),
+          )
+          as _i10.Future<List<_i6.CameraDescription>>);
+
+  @override
+  _i10.Future<int> createCamera(
+    _i6.CameraDescription? cameraDescription,
+    _i6.ResolutionPreset? resolutionPreset, {
+    bool? enableAudio = false,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(
+              #createCamera,
+              [cameraDescription, resolutionPreset],
+              {#enableAudio: enableAudio},
+            ),
+            returnValue: _i10.Future<int>.value(0),
+          )
+          as _i10.Future<int>);
+
+  @override
+  _i10.Future<int> createCameraWithSettings(
+    _i6.CameraDescription? cameraDescription,
+    _i6.MediaSettings? mediaSettings,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#createCameraWithSettings, [
+              cameraDescription,
+              mediaSettings,
+            ]),
+            returnValue: _i10.Future<int>.value(0),
+          )
+          as _i10.Future<int>);
+
+  @override
+  _i10.Future<void> initializeCamera(
+    int? cameraId, {
+    _i6.ImageFormatGroup? imageFormatGroup = _i6.ImageFormatGroup.unknown,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(
+              #initializeCamera,
+              [cameraId],
+              {#imageFormatGroup: imageFormatGroup},
+            ),
+            returnValue: _i10.Future<void>.value(),
+            returnValueForMissingStub: _i10.Future<void>.value(),
+          )
+          as _i10.Future<void>);
+
+  @override
+  _i10.Stream<_i6.CameraInitializedEvent> onCameraInitialized(int? cameraId) =>
+      (super.noSuchMethod(
+            Invocation.method(#onCameraInitialized, [cameraId]),
+            returnValue: _i10.Stream<_i6.CameraInitializedEvent>.empty(),
+          )
+          as _i10.Stream<_i6.CameraInitializedEvent>);
+
+  @override
+  _i10.Stream<_i6.CameraResolutionChangedEvent> onCameraResolutionChanged(
+    int? cameraId,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#onCameraResolutionChanged, [cameraId]),
+            returnValue: _i10.Stream<_i6.CameraResolutionChangedEvent>.empty(),
+          )
+          as _i10.Stream<_i6.CameraResolutionChangedEvent>);
+
+  @override
+  _i10.Stream<_i6.CameraClosingEvent> onCameraClosing(int? cameraId) =>
+      (super.noSuchMethod(
+            Invocation.method(#onCameraClosing, [cameraId]),
+            returnValue: _i10.Stream<_i6.CameraClosingEvent>.empty(),
+          )
+          as _i10.Stream<_i6.CameraClosingEvent>);
+
+  @override
+  _i10.Stream<_i6.CameraErrorEvent> onCameraError(int? cameraId) =>
+      (super.noSuchMethod(
+            Invocation.method(#onCameraError, [cameraId]),
+            returnValue: _i10.Stream<_i6.CameraErrorEvent>.empty(),
+          )
+          as _i10.Stream<_i6.CameraErrorEvent>);
+
+  @override
+  _i10.Stream<_i6.VideoRecordedEvent> onVideoRecordedEvent(int? cameraId) =>
+      (super.noSuchMethod(
+            Invocation.method(#onVideoRecordedEvent, [cameraId]),
+            returnValue: _i10.Stream<_i6.VideoRecordedEvent>.empty(),
+          )
+          as _i10.Stream<_i6.VideoRecordedEvent>);
+
+  @override
+  _i10.Stream<_i6.DeviceOrientationChangedEvent> onDeviceOrientationChanged() =>
+      (super.noSuchMethod(
+            Invocation.method(#onDeviceOrientationChanged, []),
+            returnValue: _i10.Stream<_i6.DeviceOrientationChangedEvent>.empty(),
+          )
+          as _i10.Stream<_i6.DeviceOrientationChangedEvent>);
+
+  @override
+  _i10.Future<void> lockCaptureOrientation(
+    int? cameraId,
+    _i8.DeviceOrientation? orientation,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#lockCaptureOrientation, [cameraId, orientation]),
+            returnValue: _i10.Future<void>.value(),
+            returnValueForMissingStub: _i10.Future<void>.value(),
+          )
+          as _i10.Future<void>);
+
+  @override
+  _i10.Future<void> unlockCaptureOrientation(int? cameraId) =>
+      (super.noSuchMethod(
+            Invocation.method(#unlockCaptureOrientation, [cameraId]),
+            returnValue: _i10.Future<void>.value(),
+            returnValueForMissingStub: _i10.Future<void>.value(),
+          )
+          as _i10.Future<void>);
+
+  @override
+  _i10.Future<_i6.XFile> takePicture(int? cameraId) =>
+      (super.noSuchMethod(
+            Invocation.method(#takePicture, [cameraId]),
+            returnValue: _i10.Future<_i6.XFile>.value(
+              _FakeXFile_4(this, Invocation.method(#takePicture, [cameraId])),
+            ),
+          )
+          as _i10.Future<_i6.XFile>);
+
+  @override
+  _i10.Future<void> prepareForVideoRecording() =>
+      (super.noSuchMethod(
+            Invocation.method(#prepareForVideoRecording, []),
+            returnValue: _i10.Future<void>.value(),
+            returnValueForMissingStub: _i10.Future<void>.value(),
+          )
+          as _i10.Future<void>);
+
+  @override
+  _i10.Future<void> startVideoRecording(
+    int? cameraId, {
+    Duration? maxVideoDuration,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(
+              #startVideoRecording,
+              [cameraId],
+              {#maxVideoDuration: maxVideoDuration},
+            ),
+            returnValue: _i10.Future<void>.value(),
+            returnValueForMissingStub: _i10.Future<void>.value(),
+          )
+          as _i10.Future<void>);
+
+  @override
+  _i10.Future<void> startVideoCapturing(_i6.VideoCaptureOptions? options) =>
+      (super.noSuchMethod(
+            Invocation.method(#startVideoCapturing, [options]),
+            returnValue: _i10.Future<void>.value(),
+            returnValueForMissingStub: _i10.Future<void>.value(),
+          )
+          as _i10.Future<void>);
+
+  @override
+  _i10.Future<_i6.XFile> stopVideoRecording(int? cameraId) =>
+      (super.noSuchMethod(
+            Invocation.method(#stopVideoRecording, [cameraId]),
+            returnValue: _i10.Future<_i6.XFile>.value(
+              _FakeXFile_4(
+                this,
+                Invocation.method(#stopVideoRecording, [cameraId]),
+              ),
+            ),
+          )
+          as _i10.Future<_i6.XFile>);
+
+  @override
+  _i10.Future<void> pauseVideoRecording(int? cameraId) =>
+      (super.noSuchMethod(
+            Invocation.method(#pauseVideoRecording, [cameraId]),
+            returnValue: _i10.Future<void>.value(),
+            returnValueForMissingStub: _i10.Future<void>.value(),
+          )
+          as _i10.Future<void>);
+
+  @override
+  _i10.Future<void> resumeVideoRecording(int? cameraId) =>
+      (super.noSuchMethod(
+            Invocation.method(#resumeVideoRecording, [cameraId]),
+            returnValue: _i10.Future<void>.value(),
+            returnValueForMissingStub: _i10.Future<void>.value(),
+          )
+          as _i10.Future<void>);
+
+  @override
+  bool supportsImageStreaming() =>
+      (super.noSuchMethod(
+            Invocation.method(#supportsImageStreaming, []),
+            returnValue: false,
+          )
+          as bool);
+
+  @override
+  _i10.Stream<_i6.CameraImageData> onStreamedFrameAvailable(
+    int? cameraId, {
+    _i6.CameraImageStreamOptions? options,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(
+              #onStreamedFrameAvailable,
+              [cameraId],
+              {#options: options},
+            ),
+            returnValue: _i10.Stream<_i6.CameraImageData>.empty(),
+          )
+          as _i10.Stream<_i6.CameraImageData>);
+
+  @override
+  _i10.Future<void> setFlashMode(int? cameraId, _i6.FlashMode? mode) =>
+      (super.noSuchMethod(
+            Invocation.method(#setFlashMode, [cameraId, mode]),
+            returnValue: _i10.Future<void>.value(),
+            returnValueForMissingStub: _i10.Future<void>.value(),
+          )
+          as _i10.Future<void>);
+
+  @override
+  _i10.Future<void> setExposureMode(int? cameraId, _i6.ExposureMode? mode) =>
+      (super.noSuchMethod(
+            Invocation.method(#setExposureMode, [cameraId, mode]),
+            returnValue: _i10.Future<void>.value(),
+            returnValueForMissingStub: _i10.Future<void>.value(),
+          )
+          as _i10.Future<void>);
+
+  @override
+  _i10.Future<void> setExposurePoint(
+    int? cameraId,
+    _i13.Point<double>? point,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#setExposurePoint, [cameraId, point]),
+            returnValue: _i10.Future<void>.value(),
+            returnValueForMissingStub: _i10.Future<void>.value(),
+          )
+          as _i10.Future<void>);
+
+  @override
+  _i10.Future<double> getMinExposureOffset(int? cameraId) =>
+      (super.noSuchMethod(
+            Invocation.method(#getMinExposureOffset, [cameraId]),
+            returnValue: _i10.Future<double>.value(0.0),
+          )
+          as _i10.Future<double>);
+
+  @override
+  _i10.Future<double> getMaxExposureOffset(int? cameraId) =>
+      (super.noSuchMethod(
+            Invocation.method(#getMaxExposureOffset, [cameraId]),
+            returnValue: _i10.Future<double>.value(0.0),
+          )
+          as _i10.Future<double>);
+
+  @override
+  _i10.Future<double> getExposureOffsetStepSize(int? cameraId) =>
+      (super.noSuchMethod(
+            Invocation.method(#getExposureOffsetStepSize, [cameraId]),
+            returnValue: _i10.Future<double>.value(0.0),
+          )
+          as _i10.Future<double>);
+
+  @override
+  _i10.Future<double> setExposureOffset(int? cameraId, double? offset) =>
+      (super.noSuchMethod(
+            Invocation.method(#setExposureOffset, [cameraId, offset]),
+            returnValue: _i10.Future<double>.value(0.0),
+          )
+          as _i10.Future<double>);
+
+  @override
+  _i10.Future<void> setFocusMode(int? cameraId, _i6.FocusMode? mode) =>
+      (super.noSuchMethod(
+            Invocation.method(#setFocusMode, [cameraId, mode]),
+            returnValue: _i10.Future<void>.value(),
+            returnValueForMissingStub: _i10.Future<void>.value(),
+          )
+          as _i10.Future<void>);
+
+  @override
+  _i10.Future<void> setFocusPoint(int? cameraId, _i13.Point<double>? point) =>
+      (super.noSuchMethod(
+            Invocation.method(#setFocusPoint, [cameraId, point]),
+            returnValue: _i10.Future<void>.value(),
+            returnValueForMissingStub: _i10.Future<void>.value(),
+          )
+          as _i10.Future<void>);
+
+  @override
+  _i10.Future<double> getMaxZoomLevel(int? cameraId) =>
+      (super.noSuchMethod(
+            Invocation.method(#getMaxZoomLevel, [cameraId]),
+            returnValue: _i10.Future<double>.value(0.0),
+          )
+          as _i10.Future<double>);
+
+  @override
+  _i10.Future<double> getMinZoomLevel(int? cameraId) =>
+      (super.noSuchMethod(
+            Invocation.method(#getMinZoomLevel, [cameraId]),
+            returnValue: _i10.Future<double>.value(0.0),
+          )
+          as _i10.Future<double>);
+
+  @override
+  _i10.Future<void> setZoomLevel(int? cameraId, double? zoom) =>
+      (super.noSuchMethod(
+            Invocation.method(#setZoomLevel, [cameraId, zoom]),
+            returnValue: _i10.Future<void>.value(),
+            returnValueForMissingStub: _i10.Future<void>.value(),
+          )
+          as _i10.Future<void>);
+
+  @override
+  _i10.Future<void> pausePreview(int? cameraId) =>
+      (super.noSuchMethod(
+            Invocation.method(#pausePreview, [cameraId]),
+            returnValue: _i10.Future<void>.value(),
+            returnValueForMissingStub: _i10.Future<void>.value(),
+          )
+          as _i10.Future<void>);
+
+  @override
+  _i10.Future<void> resumePreview(int? cameraId) =>
+      (super.noSuchMethod(
+            Invocation.method(#resumePreview, [cameraId]),
+            returnValue: _i10.Future<void>.value(),
+            returnValueForMissingStub: _i10.Future<void>.value(),
+          )
+          as _i10.Future<void>);
+
+  @override
+  _i10.Future<void> setDescriptionWhileRecording(
+    _i6.CameraDescription? description,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#setDescriptionWhileRecording, [description]),
+            returnValue: _i10.Future<void>.value(),
+            returnValueForMissingStub: _i10.Future<void>.value(),
+          )
+          as _i10.Future<void>);
+
+  @override
+  _i7.Widget buildPreview(int? cameraId) =>
+      (super.noSuchMethod(
+            Invocation.method(#buildPreview, [cameraId]),
+            returnValue: _FakeWidget_5(
+              this,
+              Invocation.method(#buildPreview, [cameraId]),
+            ),
+          )
+          as _i7.Widget);
+
+  @override
+  _i10.Future<void> dispose(int? cameraId) =>
+      (super.noSuchMethod(
+            Invocation.method(#dispose, [cameraId]),
+            returnValue: _i10.Future<void>.value(),
+            returnValueForMissingStub: _i10.Future<void>.value(),
+          )
+          as _i10.Future<void>);
+
+  @override
+  _i10.Future<void> setImageFileFormat(
+    int? cameraId,
+    _i6.ImageFileFormat? format,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#setImageFileFormat, [cameraId, format]),
+            returnValue: _i10.Future<void>.value(),
+            returnValueForMissingStub: _i10.Future<void>.value(),
+          )
+          as _i10.Future<void>);
+}
+
+/// A class which mocks [Permission].
+///
+/// See the documentation for Mockito's code generation for more information.
+// ignore: must_be_immutable
+class MockPermission extends _i1.Mock implements _i14.Permission {
+  MockPermission() {
+    _i1.throwOnMissingStub(this);
+  }
+
+  @override
+  int get value =>
+      (super.noSuchMethod(Invocation.getter(#value), returnValue: 0) as int);
 }

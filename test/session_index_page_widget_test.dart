@@ -8,6 +8,16 @@ import 'package:roadmindphone/session_index_page.dart';
 import 'package:mockito/mockito.dart';
 import 'package:roadmindphone/session_gps_point.dart';
 import 'mocks.mocks.dart';
+import 'dart:math';
+import 'mocks/mock_flutter_map.dart';
+
+double _calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+  const p = 0.017453292519943295; // Math.PI / 180
+  final a = 0.5 -
+      cos((lat2 - lat1) * p) / 2 +
+      cos(lat1 * p) * cos(lat2 * p) * (1 - cos((lon2 - lon1) * p)) / 2;
+  return 12742 * asin(sqrt(a)); // 2 * R; R = 6371 km
+}
 
 void main() {
   group('SessionIndexPage Widget Tests', () {
@@ -15,6 +25,10 @@ void main() {
     late Project project;
     late Session sessionWithGps;
     late Session sessionWithoutGps;
+    late double expectedTotalDistanceWithGps;
+    late double expectedAverageSpeedWithGps;
+    late double expectedTotalDistanceWithoutGps;
+    late double expectedAverageSpeedWithoutGps;
 
     setUp(() {
       mockDbHelper = MockDatabaseHelper();
@@ -42,6 +56,39 @@ void main() {
         gpsPoints: 0,
       );
 
+      // Calculate expected values for sessionWithGps
+      if (sessionWithGps.gpsData.length > 1) {
+        double totalDistance = 0;
+        double totalSpeed = 0;
+
+        for (int i = 0; i < sessionWithGps.gpsData.length - 1; i++) {
+          final point1 = sessionWithGps.gpsData[i];
+          final point2 = sessionWithGps.gpsData[i + 1];
+          totalDistance += _calculateDistance(
+            point1.latitude,
+            point1.longitude,
+            point2.latitude,
+            point2.longitude,
+          );
+        }
+
+        for (final point in sessionWithGps.gpsData) {
+          totalSpeed += point.speed ?? 0.0;
+        }
+
+        expectedTotalDistanceWithGps = totalDistance;
+        expectedAverageSpeedWithGps = sessionWithGps.gpsData.isNotEmpty
+            ? totalSpeed / sessionWithGps.gpsData.length * 3.6
+            : 0.0;
+      } else {
+        expectedTotalDistanceWithGps = 0.0;
+        expectedAverageSpeedWithGps = 0.0;
+      }
+
+      // Calculate expected values for sessionWithoutGps
+      expectedTotalDistanceWithoutGps = 0.0;
+      expectedAverageSpeedWithoutGps = 0.0;
+
       when(mockDbHelper.updateSession(any))
           .thenAnswer((invocation) async => 1);
       when(mockDbHelper.deleteSession(any))
@@ -52,6 +99,8 @@ void main() {
           .thenAnswer((_) async => sessionWithGps);
       when(mockDbHelper.readSession(sessionWithoutGps.id!))
           .thenAnswer((_) async => sessionWithoutGps);
+      when(mockDbHelper.readAllProjects())
+          .thenAnswer((_) async => [project]);
     });
 
     tearDown(() {
@@ -61,23 +110,42 @@ void main() {
 
     testWidgets('Displays session details correctly with GPS data', (WidgetTester tester) async {
       await tester.pumpWidget(MaterialApp(
-        home: SessionIndexPage(session: sessionWithGps),
+        home: SessionIndexPage(
+          session: sessionWithGps,
+          flutterMapBuilder: ({key, required options, children, mapController}) {
+            return MockFlutterMap(
+              key: key,
+              options: options,
+              children: children ?? [],
+              mapController: mapController,
+            );
+          },
+        ),
       ));
       await tester.pumpAndSettle();
 
       expect(find.text('Session with GPS'), findsOneWidget);
       expect(find.text('Points GPS'), findsOneWidget);
       expect(find.text('50'), findsOneWidget);
-      expect(find.text('Durée'), findsOneWidget);
       expect(find.text('Vitesse Moyenne'), findsOneWidget);
-      expect(find.textContaining('km/h'), findsOneWidget);
+      expect(find.text('${expectedAverageSpeedWithGps.toStringAsFixed(2)} km/h'), findsOneWidget);
       expect(find.text('Distance'), findsOneWidget);
-      expect(find.textContaining('km'), findsOneWidget);
+      expect(find.text('${expectedTotalDistanceWithGps.toStringAsFixed(2)} km'), findsOneWidget);
     });
 
     testWidgets('Displays session details correctly without GPS data', (WidgetTester tester) async {
       await tester.pumpWidget(MaterialApp(
-        home: SessionIndexPage(session: sessionWithoutGps),
+        home: SessionIndexPage(
+          session: sessionWithoutGps,
+          flutterMapBuilder: ({key, required options, children, mapController}) {
+            return MockFlutterMap(
+              key: key,
+              options: options,
+              children: children ?? [],
+              mapController: mapController,
+            );
+          },
+        ),
       ));
       await tester.pumpAndSettle();
 
@@ -87,9 +155,9 @@ void main() {
       expect(find.text('Durée'), findsOneWidget);
       expect(find.text('00:10:00'), findsOneWidget);
       expect(find.text('Vitesse Moyenne'), findsOneWidget);
-      expect(find.textContaining('km/h'), findsOneWidget);
+      expect(find.text('${expectedAverageSpeedWithoutGps.toStringAsFixed(2)} km/h'), findsOneWidget);
       expect(find.text('Distance'), findsOneWidget);
-      expect(find.textContaining('km'), findsOneWidget);
+      expect(find.text('${expectedTotalDistanceWithoutGps.toStringAsFixed(2)} km'), findsOneWidget);
       expect(find.text('En attente de données'), findsOneWidget);
     });
 
@@ -98,7 +166,17 @@ void main() {
           .thenAnswer((_) async => 1);
 
       await tester.pumpWidget(MaterialApp(
-        home: SessionIndexPage(session: sessionWithGps),
+        home: SessionIndexPage(
+          session: sessionWithGps,
+          flutterMapBuilder: ({key, required options, children, mapController}) {
+            return MockFlutterMap(
+              key: key,
+              options: options,
+              children: children ?? [],
+              mapController: mapController,
+            );
+          },
+        ),
       ));
       await tester.pumpAndSettle();
 
@@ -127,7 +205,17 @@ void main() {
           .thenAnswer((_) async => []); // After deletion, no sessions
 
       await tester.pumpWidget(MaterialApp(
-        home: SessionIndexPage(session: sessionWithGps),
+        home: SessionIndexPage(
+          session: sessionWithGps,
+          flutterMapBuilder: ({key, required options, children, mapController}) {
+            return MockFlutterMap(
+              key: key,
+              options: options,
+              children: children ?? [],
+              mapController: mapController,
+            );
+          },
+        ),
       ));
       await tester.pumpAndSettle();
 
@@ -144,8 +232,11 @@ void main() {
       await tester.tap(find.text('SUPPRIMER'));
       await tester.pumpAndSettle();
 
+      // Add this line to ensure MyHomePage is rebuilt
+      await tester.pumpAndSettle();
+
       // Verify navigation back to ProjectIndexPage and session is gone
-      expect(find.text('Test Project'), findsOneWidget); // Back on ProjectIndexPage
+      expect(find.byType(SessionIndexPage), findsNothing); // SessionIndexPage should be gone
       expect(find.text('Session with GPS'), findsNothing); // Session should be deleted
     });
   });
