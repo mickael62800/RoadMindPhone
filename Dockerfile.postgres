@@ -1,0 +1,12 @@
+# Use the official PostgreSQL image as a base
+FROM postgres:latest
+
+# Set the PostgreSQL port
+ENV PGPORT 5439
+
+# Expose the PostgreSQL port
+EXPOSE 5439
+
+# You can add more configurations here if needed,
+# for example, to initialize a specific database or user.
+# For now, we'll keep it simple.
