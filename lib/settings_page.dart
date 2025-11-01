@@ -9,7 +9,8 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  final TextEditingController _serverAddressController = TextEditingController();
+  final TextEditingController _serverAddressController =
+      TextEditingController();
   final TextEditingController _portController = TextEditingController();
 
   static const String _serverAddressKey = 'db_server_address';
@@ -24,8 +25,10 @@ class _SettingsPageState extends State<SettingsPage> {
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      _serverAddressController.text = prefs.getString(_serverAddressKey) ?? 'localhost';
-      _portController.text = prefs.getString(_portKey) ?? '5439'; // Default port
+      _serverAddressController.text =
+          prefs.getString(_serverAddressKey) ?? 'localhost';
+      _portController.text =
+          prefs.getString(_portKey) ?? '5439'; // Default port
     });
   }
 
@@ -33,11 +36,10 @@ class _SettingsPageState extends State<SettingsPage> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_serverAddressKey, _serverAddressController.text);
     await prefs.setString(_portKey, _portController.text);
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Settings saved!')),
-      );
-    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Settings saved!')));
     Navigator.of(context).pop(); // Navigate back to the previous page
   }
 

@@ -6,8 +6,9 @@ import 'dart:convert' as json;
 
 class ExportDataPage extends StatefulWidget {
   final Project project;
+  final http.Client? httpClient; // Add optional http.Client
 
-  const ExportDataPage({super.key, required this.project});
+  const ExportDataPage({super.key, required this.project, this.httpClient});
 
   @override
   State<ExportDataPage> createState() => _ExportDataPageState();
@@ -15,16 +16,22 @@ class ExportDataPage extends StatefulWidget {
 
 class _ExportDataPageState extends State<ExportDataPage> {
   bool _projectExists = false;
+  late final http.Client _client; // Use injected client
 
   @override
   void initState() {
     super.initState();
-    _checkProjectExists();
+    _client = widget.httpClient ?? http.Client(); // Initialize client
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _checkProjectExists();
+      }
+    });
   }
 
   Future<void> _checkProjectExists() async {
     try {
-      final response = await http.head(
+      final response = await _client.head(
         Uri.parse('http://192.168.1.10:5160/api/Projects/${widget.project.id}'),
       );
 
@@ -38,16 +45,31 @@ class _ExportDataPageState extends State<ExportDataPage> {
         });
       } else {
         // Handle other status codes
-        print('Error checking project existence: ${response.statusCode}');
+        debugPrint('Error checking project existence: ${response.statusCode}');
         setState(() {
           _projectExists = false;
         });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Erreur lors de la vérification de l\'existence du projet: ${response.statusCode}',
+              ),
+            ),
+          );
+        }
       }
     } catch (e) {
-      print('Error checking project existence: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur lors de la vérification de l\'existence du projet: $e')),
-      );
+      debugPrint('Error checking project existence: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Erreur lors de la vérification de l\'existence du projet: $e',
+            ),
+          ),
+        );
+      }
       setState(() {
         _projectExists = false;
       });
@@ -66,8 +88,12 @@ class _ExportDataPageState extends State<ExportDataPage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             _projectExists
-                ? const Text('Le projet existe dans la base de données distante.')
-                : const Text('Le projet n\'existe PAS dans la base de données distante.'),
+                ? const Text(
+                    'Le projet existe dans la base de données distante.',
+                  )
+                : const Text(
+                    'Le projet n\'existe PAS dans la base de données distante.',
+                  ),
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () {
@@ -77,7 +103,9 @@ class _ExportDataPageState extends State<ExportDataPage> {
                   _createProject();
                 }
               },
-              child: Text(_projectExists ? 'Mettre à jour le projet' : 'Créer le projet'),
+              child: Text(
+                _projectExists ? 'Mettre à jour le projet' : 'Créer le projet',
+              ),
             ),
           ],
         ),
@@ -93,65 +121,95 @@ class _ExportDataPageState extends State<ExportDataPage> {
     final projectData = {
       'name': widget.project.title,
       'description': widget.project.description ?? '',
-      'sessions': (widget.project.sessions ?? []).map((session) => {
-        'id': session.id, // Temporary ID for linking with video
-        'name': session.name,
-        'startTime': session.startTime?.toIso8601String(),
-        'endTime': session.endTime?.toIso8601String(),
-        'notes': session.notes,
-        'videoPath': null, // Will be filled by API
-        'gpsPoints': session.gpsData.map((gpsPoint) => {
-          'latitude': gpsPoint.latitude,
-          'longitude': gpsPoint.longitude,
-          'altitude': gpsPoint.altitude,
-          'speed': gpsPoint.speed,
-          'heading': gpsPoint.heading,
-          'timestamp': gpsPoint.timestamp.toIso8601String(),
-          'videoTimestampMs': gpsPoint.videoTimestampMs,
-        }).toList(),
-      }).toList(),
+      'sessions': (widget.project.sessions ?? [])
+          .map(
+            (session) => {
+              'id': session.id ?? 0, // Provide 0 if id is null
+              'name': session.name,
+              'startTime': session.startTime?.toIso8601String(),
+              'endTime': session.endTime?.toIso8601String(),
+              'notes': session.notes,
+              'videoPath': null, // Will be filled by API
+              'gpsPoints': session.gpsData
+                  .map(
+                    (gpsPoint) => {
+                      'id': gpsPoint.id ?? 0, // Provide 0 if id is null
+                      'sessionId': gpsPoint.sessionId,
+                      'latitude': gpsPoint.latitude,
+                      'longitude': gpsPoint.longitude,
+                      'altitude': gpsPoint.altitude,
+                      'speed': gpsPoint.speed,
+                      'heading': gpsPoint.heading,
+                      'timestamp': gpsPoint.timestamp.toIso8601String(),
+                      'videoTimestampMs': gpsPoint.videoTimestampMs,
+                    },
+                  )
+                  .toList(),
+            },
+          )
+          .toList(),
     };
 
     request.fields['ProjectData'] = json.jsonEncode(projectData);
 
     // Add video files
     for (final session in (widget.project.sessions ?? [])) {
-      if (session.videoPath != null && io.File(session.videoPath!).existsSync()) {
-        request.files.add(await http.MultipartFile.fromPath(
-          'sessionVideo_${session.id}',
-          session.videoPath!,
-        ));
+      if (session.videoPath != null &&
+          io.File(session.videoPath!).existsSync()) {
+        request.files.add(
+          await http.MultipartFile.fromPath(
+            'sessionVideo_${session.id}',
+            session.videoPath!,
+          ),
+        );
       }
     }
 
     try {
-      final response = await request.send();
+      final response = await _client.send(request);
       if (response.statusCode == 201) {
         final responseBody = await response.stream.bytesToString();
-        print('Project created successfully: $responseBody');
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Projet créé avec succès !')),
-        );
-        setState(() {
-          _projectExists = true; // Project now exists on the remote server
-        });
+        debugPrint('Project created successfully: $responseBody');
+        if (!mounted) return;
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Projet créé avec succès !')),
+          );
+          setState(() {
+            _projectExists = true; // Project now exists on the remote server
+          });
+        }
       } else {
         final errorBody = await response.stream.bytesToString();
-        print('Error creating project: ${response.statusCode} - $errorBody');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Échec de la création du projet: ${response.statusCode}')),
+        debugPrint(
+          'Error creating project: ${response.statusCode} - $errorBody',
         );
+        if (!mounted) return;
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Échec de la création du projet: ${response.statusCode}',
+              ),
+            ),
+          );
+        }
       }
     } catch (e) {
-      print('Error creating project: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur lors de la création du projet: $e')),
-      );
+      debugPrint('Error creating project: $e');
+      if (!mounted) return;
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur lors de la création du projet: $e')),
+        );
+      }
     }
   }
 
   Future<void> _updateProject() async {
-    final url = Uri.parse('http://192.168.1.10:5160/api/Projects/${widget.project.id}');
+    final url = Uri.parse(
+      'http://192.168.1.10:5160/api/Projects/${widget.project.id}',
+    );
     final request = http.MultipartRequest('PUT', url);
 
     // Prepare ProjectData JSON
@@ -159,60 +217,92 @@ class _ExportDataPageState extends State<ExportDataPage> {
       'id': widget.project.id,
       'name': widget.project.title,
       'description': widget.project.description ?? '',
-      'sessions': (widget.project.sessions ?? []).map((session) => {
-        'id': session.id, // Use actual ID for existing sessions, temporary for new ones
-        'projectId': widget.project.id,
-        'name': session.name,
-        'startTime': session.startTime?.toIso8601String(),
-        'endTime': session.endTime?.toIso8601String(),
-        'notes': session.notes,
-        'videoPath': session.videoPath, // Keep existing path or null
-        'gpsPoints': session.gpsData.map((gpsPoint) => {
-          'id': gpsPoint.id, // Use actual ID for existing GPS points, 0 for new ones
-          'sessionId': session.id,
-          'latitude': gpsPoint.latitude,
-          'longitude': gpsPoint.longitude,
-          'altitude': gpsPoint.altitude,
-          'speed': gpsPoint.speed,
-          'heading': gpsPoint.heading,
-          'timestamp': gpsPoint.timestamp.toIso8601String(),
-          'videoTimestampMs': gpsPoint.videoTimestampMs,
-        }).toList(),
-      }).toList(),
+      'sessions': (widget.project.sessions ?? [])
+          .map(
+            (session) => {
+              'id':
+                  session.id ??
+                  0, // Use actual ID for existing sessions, temporary for new ones
+              'projectId': widget.project.id,
+              'name': session.name,
+              'startTime': session.startTime?.toIso8601String(),
+              'endTime': session.endTime?.toIso8601String(),
+              'notes': session.notes,
+              'videoPath': session.videoPath, // Keep existing path or null
+              'gpsPoints': session.gpsData
+                  .map(
+                    (gpsPoint) => {
+                      'id':
+                          gpsPoint.id ??
+                          0, // Use actual ID for existing GPS points, 0 for new ones
+                      'sessionId': session.id ?? 0,
+                      'latitude': gpsPoint.latitude,
+                      'longitude': gpsPoint.longitude,
+                      'altitude': gpsPoint.altitude,
+                      'speed': gpsPoint.speed,
+                      'heading': gpsPoint.heading,
+                      'timestamp': gpsPoint.timestamp.toIso8601String(),
+                      'videoTimestampMs': gpsPoint.videoTimestampMs,
+                    },
+                  )
+                  .toList(),
+            },
+          )
+          .toList(),
     };
 
     request.fields['ProjectData'] = json.jsonEncode(projectData);
 
     // Add video files (for new or updated videos)
     for (final session in (widget.project.sessions ?? [])) {
-      if (session.videoPath != null && io.File(session.videoPath!).existsSync()) {
-        request.files.add(await http.MultipartFile.fromPath(
-          'sessionVideo_${session.id}',
-          session.videoPath!,
-        ));
+      if (session.videoPath != null &&
+          io.File(session.videoPath!).existsSync()) {
+        request.files.add(
+          await http.MultipartFile.fromPath(
+            'sessionVideo_${session.id}',
+            session.videoPath!,
+          ),
+        );
       }
     }
 
     try {
-      final response = await request.send();
+      final response = await _client.send(request);
       if (response.statusCode == 200) {
         final responseBody = await response.stream.bytesToString();
-        print('Project updated successfully: $responseBody');
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Projet mis à jour avec succès !')),
-        );
+        debugPrint('Project updated successfully: $responseBody');
+        if (!mounted) return;
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Projet mis à jour avec succès !')),
+          );
+        }
       } else {
         final errorBody = await response.stream.bytesToString();
-        print('Error updating project: ${response.statusCode} - $errorBody');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Échec de la mise à jour du projet: ${response.statusCode}')),
+        debugPrint(
+          'Error updating project: ${response.statusCode} - $errorBody',
         );
+        if (!mounted) return;
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Échec de la mise à jour du projet: ${response.statusCode}',
+              ),
+            ),
+          );
+        }
       }
     } catch (e) {
-      print('Error updating project: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur lors de la mise à jour du projet: $e')),
-      );
+      debugPrint('Error updating project: $e');
+      if (!mounted) return;
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur lors de la mise à jour du projet: $e'),
+          ),
+        );
+      }
     }
   }
 }

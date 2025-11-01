@@ -1,0 +1,7 @@
+targets:
+  $default:
+    builders:
+      mockito|mockBuilder:
+        options:
+          build_extensions:
+            .dart: .mocks.dart

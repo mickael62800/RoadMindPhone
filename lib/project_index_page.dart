@@ -1,100 +1,45 @@
 import 'package:flutter/material.dart';
 import 'package:roadmindphone/database_helper.dart';
 import 'package:roadmindphone/main.dart';
+import 'package:flutter_map/flutter_map.dart'; // Import for MapOptions and MapController
 
 import 'package:roadmindphone/session_completion_page.dart';
 import 'package:roadmindphone/session_index_page.dart';
 import 'package:roadmindphone/export_data_page.dart';
 
-import 'dart:convert';
+import 'package:roadmindphone/session.dart';
 
-import 'package:roadmindphone/session_gps_point.dart';
-
-class Session {
-  final int? id;
-  final int projectId;
-  final String name;
-  final Duration duration;
-  final int gpsPoints;
-  final String? videoPath;
-  final List<SessionGpsPoint> gpsData;
-  final DateTime? startTime;
-  final DateTime? endTime;
-  final String? notes;
-
-  Session({
-    this.id,
-    required this.projectId,
-    required this.name,
-    required this.duration,
-    required this.gpsPoints,
-    this.videoPath,
-    this.gpsData = const [],
-    this.startTime,
-    this.endTime,
-    this.notes,
-  });
-
-  Session copy({
-    int? id,
-    int? projectId,
-    String? name,
-    Duration? duration,
-    int? gpsPoints,
-    String? videoPath,
-    List<SessionGpsPoint>? gpsData,
-    DateTime? startTime,
-    DateTime? endTime,
-    String? notes,
-  }) =>
-      Session(
-        id: id ?? this.id,
-        projectId: projectId ?? this.projectId,
-        name: name ?? this.name,
-        duration: duration ?? this.duration,
-        gpsPoints: gpsPoints ?? this.gpsPoints,
-        videoPath: videoPath ?? this.videoPath,
-        gpsData: gpsData ?? this.gpsData,
-        startTime: startTime ?? this.startTime,
-        endTime: endTime ?? this.endTime,
-        notes: notes ?? this.notes,
-      );
-
-  static Session fromMap(Map<String, dynamic> map) => Session(
-        id: map['id'] as int?,
-        projectId: map['projectId'] as int,
-        name: map['name'] as String,
-        duration: Duration(milliseconds: map['duration'] as int),
-        gpsPoints: map['gpsPoints'] as int,
-        videoPath: map['videoPath'] as String?,
-        gpsData: map['gpsData'] == null
-            ? []
-            : (json.decode(map['gpsData'] as String) as List)
-                .map((e) => SessionGpsPoint.fromMap(e as Map<String, dynamic>))
-                .toList(),
-        startTime: map['startTime'] != null ? DateTime.parse(map['startTime'] as String) : null,
-        endTime: map['endTime'] != null ? DateTime.parse(map['endTime'] as String) : null,
-        notes: map['notes'] as String?,
-      );
-
-  Map<String, dynamic> toMap() => {
-        'id': id,
-        'projectId': projectId,
-        'name': name,
-        'duration': duration.inMilliseconds,
-        'gpsPoints': gpsPoints,
-        'videoPath': videoPath,
-        'gpsData': json.encode(gpsData.map((e) => e.toMap()).toList()),
-        'startTime': startTime?.toIso8601String(),
-        'endTime': endTime?.toIso8601String(),
-        'notes': notes,
-      };
-}
+typedef FlutterMapBuilder =
+    Widget Function({
+      Key? key,
+      required MapOptions options,
+      List<Widget>? children,
+      MapController? mapController,
+    });
 
 class ProjectIndexPage extends StatefulWidget {
   final Project project;
+  final FlutterMapBuilder flutterMapBuilder;
 
-  const ProjectIndexPage({super.key, required this.project});
+  const ProjectIndexPage({
+    super.key,
+    required this.project,
+    this.flutterMapBuilder = _defaultFlutterMapBuilder,
+  });
+
+  static Widget _defaultFlutterMapBuilder({
+    Key? key,
+    required MapOptions options,
+    List<Widget>? children,
+    MapController? mapController,
+  }) {
+    return FlutterMap(
+      key: key,
+      options: options,
+      mapController: mapController,
+      children: children ?? [],
+    );
+  }
 
   @override
   State<ProjectIndexPage> createState() => _ProjectIndexPageState();
@@ -113,7 +58,9 @@ class _ProjectIndexPageState extends State<ProjectIndexPage> {
 
   Future<void> _refreshSessions() async {
     setState(() {
-      _sessions = DatabaseHelper.instance.readAllSessionsForProject(_project.id!);
+      _sessions = DatabaseHelper.instance.readAllSessionsForProject(
+        _project.id!,
+      );
     });
   }
 
@@ -152,12 +99,15 @@ class _ProjectIndexPageState extends State<ProjectIndexPage> {
               onPressed: () async {
                 if (controller.text.isNotEmpty) {
                   final newSession = await _addSession(controller.text);
+                  if (!context.mounted) return;
                   Navigator.of(context).pop(); // Close the dialog
                   await Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) =>
-                          SessionCompletionPage(session: newSession),
+                      builder: (context) => SessionCompletionPage(
+                        session: newSession,
+                        flutterMapBuilder: widget.flutterMapBuilder,
+                      ),
                     ),
                   );
                   _refreshSessions();
@@ -195,10 +145,12 @@ class _ProjectIndexPageState extends State<ProjectIndexPage> {
               } else if (value == 'Exporter') {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => ExportDataPage(project: _project)),
+                  MaterialPageRoute(
+                    builder: (context) => ExportDataPage(project: _project),
+                  ),
                 );
               } else {
-                print('Value: $value');
+                debugPrint('Value: $value');
               }
             },
             itemBuilder: (BuildContext context) {
@@ -234,18 +186,27 @@ class _ProjectIndexPageState extends State<ProjectIndexPage> {
             final sessions = snapshot.data!;
             Widget sessionCard(Session session) {
               return Card(
-                margin: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
+                margin: const EdgeInsets.symmetric(
+                  vertical: 4.0,
+                  horizontal: 8.0,
+                ),
                 elevation: 4.0,
                 child: ListTile(
                   title: Text(session.name),
-                  subtitle: Text('Durée: ${_formatDuration(session.duration)} | GPS Points: ${session.gpsPoints}'),
+                  subtitle: Text(
+                    'Durée: ${_formatDuration(session.duration)} | GPS Points: ${session.gpsPoints}',
+                  ),
                   onTap: () async {
                     await Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => SessionIndexPage(session: session),
+                        builder: (context) => SessionIndexPage(
+                          session: session,
+                          flutterMapBuilder: widget.flutterMapBuilder,
+                        ),
                       ),
                     );
+                    if (!context.mounted) return;
                     _refreshSessions();
                   },
                 ),
@@ -256,10 +217,11 @@ class _ProjectIndexPageState extends State<ProjectIndexPage> {
               builder: (context, orientation) {
                 if (orientation == Orientation.landscape) {
                   return GridView.builder(
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3,
-                      childAspectRatio: 4,
-                    ),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          childAspectRatio: 4,
+                        ),
                     itemCount: sessions.length,
                     itemBuilder: (context, index) {
                       final session = sessions[index];
@@ -306,6 +268,7 @@ class _ProjectIndexPageState extends State<ProjectIndexPage> {
               child: const Text('SUPPRIMER'),
               onPressed: () async {
                 await DatabaseHelper.instance.delete(_project.id!);
+                if (!context.mounted) return;
                 Navigator.of(context).pop(); // Close the dialog
                 Navigator.of(context).pop(); // Go back to the previous screen
               },
@@ -317,7 +280,9 @@ class _ProjectIndexPageState extends State<ProjectIndexPage> {
   }
 
   void _showRenameDialog() async {
-    final TextEditingController controller = TextEditingController(text: _project.title);
+    final TextEditingController controller = TextEditingController(
+      text: _project.title,
+    );
     final newTitle = await showDialog<String>(
       context: context,
       builder: (context) {
@@ -326,7 +291,9 @@ class _ProjectIndexPageState extends State<ProjectIndexPage> {
           content: TextField(
             controller: controller,
             autofocus: true,
-            decoration: const InputDecoration(hintText: "Nouveau titre du projet"),
+            decoration: const InputDecoration(
+              hintText: "Nouveau titre du projet",
+            ),
           ),
           actions: <Widget>[
             TextButton(
@@ -349,10 +316,10 @@ class _ProjectIndexPageState extends State<ProjectIndexPage> {
     if (newTitle != null && newTitle.isNotEmpty) {
       final updatedProject = _project.copy(title: newTitle);
       await DatabaseHelper.instance.update(updatedProject);
+      if (!mounted) return;
       setState(() {
         _project = updatedProject;
       });
     }
   }
-
 }

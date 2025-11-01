@@ -2,9 +2,10 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:roadmindphone/database_helper.dart';
-import 'package:roadmindphone/project_index_page.dart'; // Import Session class
 import 'package:roadmindphone/settings_page.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:roadmindphone/session.dart'; // Import Session class
+import 'package:roadmindphone/project_index_page.dart';
 
 Future<void> main() async {
   if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
@@ -21,6 +22,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      showSemanticsDebugger: true, // Add this line
       title: 'Flutter Demo',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),

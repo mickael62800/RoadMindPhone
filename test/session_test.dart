@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:roadmindphone/project_index_page.dart'; // Assuming Session class is in project_index_page.dart
+import 'package:roadmindphone/session.dart';
 import 'package:roadmindphone/session_gps_point.dart';
 import 'dart:convert';
 
@@ -23,8 +23,22 @@ void main() {
 
     test('Session can be created with all fields', () {
       final gpsData = [
-        SessionGpsPoint(sessionId: 1, latitude: 1.0, longitude: 2.0, speed: 10.0, timestamp: DateTime.now(), videoTimestampMs: 0),
-        SessionGpsPoint(sessionId: 1, latitude: 3.0, longitude: 4.0, speed: 20.0, timestamp: DateTime.now(), videoTimestampMs: 0),
+        SessionGpsPoint(
+          sessionId: 1,
+          latitude: 1.0,
+          longitude: 2.0,
+          speed: 10.0,
+          timestamp: DateTime.now(),
+          videoTimestampMs: 0,
+        ),
+        SessionGpsPoint(
+          sessionId: 1,
+          latitude: 3.0,
+          longitude: 4.0,
+          speed: 20.0,
+          timestamp: DateTime.now(),
+          videoTimestampMs: 0,
+        ),
       ];
       final session = Session(
         id: 1,
@@ -63,12 +77,22 @@ void main() {
       expect(updatedSession.name, 'Updated Session');
       expect(updatedSession.duration, originalSession.duration);
       expect(updatedSession.gpsPoints, 75);
-      expect(originalSession.name, 'Original Session'); // Ensure original is unchanged
+      expect(
+        originalSession.name,
+        'Original Session',
+      ); // Ensure original is unchanged
     });
 
     test('Session.fromMap creates a Session object from a map', () {
       final gpsData = [
-        SessionGpsPoint(sessionId: 1, latitude: 1.0, longitude: 2.0, speed: 10.0, timestamp: DateTime.now(), videoTimestampMs: 0),
+        SessionGpsPoint(
+          sessionId: 1,
+          latitude: 1.0,
+          longitude: 2.0,
+          speed: 10.0,
+          timestamp: DateTime.now(),
+          videoTimestampMs: 0,
+        ),
       ];
       final map = {
         'id': 1,
@@ -94,7 +118,14 @@ void main() {
 
     test('Session.toMap converts a Session object to a map', () {
       final gpsData = [
-        SessionGpsPoint(sessionId: 2, latitude: 1.0, longitude: 2.0, speed: 10.0, timestamp: DateTime.now(), videoTimestampMs: 0),
+        SessionGpsPoint(
+          sessionId: 2,
+          latitude: 1.0,
+          longitude: 2.0,
+          speed: 10.0,
+          timestamp: DateTime.now(),
+          videoTimestampMs: 0,
+        ),
       ];
       final session = Session(
         id: 2,
@@ -112,7 +143,30 @@ void main() {
       expect(map['duration'], const Duration(minutes: 20).inMilliseconds);
       expect(map['gpsPoints'], 40);
       expect(map['videoPath'], '/path/to/video_to_map.mp4');
-      expect(map['gpsData'], json.encode(gpsData.map((e) => e.toMap()).toList()));
+      expect(
+        map['gpsData'],
+        json.encode(gpsData.map((e) => e.toMap()).toList()),
+      );
+    });
+
+    test('Session.fromMap handles null gpsData', () {
+      final map = {
+        'id': 3,
+        'projectId': 3,
+        'name': 'Session with null GPS',
+        'duration': const Duration(minutes: 5).inMilliseconds,
+        'gpsPoints': 0,
+        'videoPath': null,
+        'gpsData': null,
+      };
+      final session = Session.fromMap(map);
+      expect(session.id, 3);
+      expect(session.projectId, 3);
+      expect(session.name, 'Session with null GPS');
+      expect(session.duration, const Duration(minutes: 5));
+      expect(session.gpsPoints, 0);
+      expect(session.videoPath, null);
+      expect(session.gpsData, isEmpty); // Should be empty list, not null
     });
   });
 }

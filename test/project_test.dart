@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:roadmindphone/main.dart'; // Assuming Project class is in main.dart
+import 'package:roadmindphone/main.dart';
 
 void main() {
   group('Project', () {
@@ -41,7 +41,10 @@ void main() {
       expect(updatedProject.title, 'Updated Title');
       expect(updatedProject.sessionCount, 15);
       expect(updatedProject.duration, originalProject.duration);
-      expect(originalProject.title, 'Original Title'); // Ensure original is unchanged
+      expect(
+        originalProject.title,
+        'Original Title',
+      ); // Ensure original is unchanged
     });
 
     test('Project.fromMap creates a Project object from a map', () {
