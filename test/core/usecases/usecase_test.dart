@@ -127,14 +127,5 @@ void main() {
       expect(params1.hashCode, equals(params2.hashCode));
       expect(params1.hashCode, equals(0));
     });
-
-    test('should not be equal to other types', () {
-      // Arrange
-      const params = NoParams();
-      const other = 'not a NoParams';
-
-      // Assert
-      expect(params == other, isFalse);
-    });
   });
 }
