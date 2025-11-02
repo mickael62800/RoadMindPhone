@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:roadmindphone/database_helper.dart';
-import 'package:roadmindphone/main.dart';
+import 'package:roadmindphone/project.dart';
 import 'package:roadmindphone/session.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:roadmindphone/session_gps_point.dart';

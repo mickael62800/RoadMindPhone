@@ -1,6 +1,8 @@
 import 'package:sqflite/sqflite.dart';
+import 'dart:async';
+
 import 'package:path/path.dart';
-import 'package:roadmindphone/main.dart';
+import 'package:roadmindphone/project.dart';
 import 'package:roadmindphone/session.dart';
 
 class DatabaseHelper {
@@ -35,11 +37,16 @@ class DatabaseHelper {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
 
-    return await openDatabase(path, version: 5, onCreate: _createDB, onUpgrade: _onUpgrade);
+    return await openDatabase(
+      path,
+      version: 7,
+      onCreate: _createDB,
+      onUpgrade: _onUpgrade,
+    );
   }
 
   Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    if (oldVersion < 5) {
+    if (oldVersion < 7) {
       await db.execute('DROP TABLE IF EXISTS sessions');
       await db.execute('DROP TABLE IF EXISTS projects');
       await _createDB(db, newVersion);
@@ -55,7 +62,11 @@ class DatabaseHelper {
 CREATE TABLE projects (
   id $idType,
   title $textType,
-  description TEXT
+  description TEXT,
+  session_count INTEGER DEFAULT 0,
+  duration INTEGER DEFAULT 0,
+  created_at TEXT NOT NULL,
+  updated_at TEXT
 )
 ''');
 
@@ -78,7 +89,12 @@ CREATE TABLE sessions (
 
   Future<Project> create(Project project) async {
     final db = await instance.database;
-    final id = await db.insert('projects', project.toMap());
+    final projectMap = project.toMap();
+    // Ajouter created_at automatiquement si non présent
+    if (!projectMap.containsKey('created_at')) {
+      projectMap['created_at'] = DateTime.now().toIso8601String();
+    }
+    final id = await db.insert('projects', projectMap);
     return project.copy(id: id);
   }
 
@@ -101,8 +117,14 @@ CREATE TABLE sessions (
       final projectMap = maps.first;
       final sessions = await readAllSessionsForProject(projectMap['id'] as int);
       final duration = sessions.fold<Duration>(
-          Duration.zero, (previousValue, element) => previousValue + element.duration);
-      return Project.fromMap(projectMap).copy(sessionCount: sessions.length, duration: duration, sessions: sessions);
+        Duration.zero,
+        (previousValue, element) => previousValue + element.duration,
+      );
+      return Project.fromMap(projectMap).copy(
+        sessionCount: sessions.length,
+        duration: duration,
+        sessions: sessions,
+      );
     } else {
       throw Exception('ID $id not found');
     }
@@ -110,11 +132,7 @@ CREATE TABLE sessions (
 
   Future<Session> readSession(int id) async {
     final db = await instance.database;
-    final maps = await db.query(
-      'sessions',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    final maps = await db.query('sessions', where: 'id = ?', whereArgs: [id]);
 
     if (maps.isNotEmpty) {
       return Session.fromMap(maps.first);
@@ -132,8 +150,16 @@ CREATE TABLE sessions (
     for (final map in result) {
       final sessions = await readAllSessionsForProject(map['id'] as int);
       final duration = sessions.fold<Duration>(
-          Duration.zero, (previousValue, element) => previousValue + element.duration);
-      projects.add(Project.fromMap(map).copy(sessionCount: sessions.length, duration: duration, sessions: sessions));
+        Duration.zero,
+        (previousValue, element) => previousValue + element.duration,
+      );
+      projects.add(
+        Project.fromMap(map).copy(
+          sessionCount: sessions.length,
+          duration: duration,
+          sessions: sessions,
+        ),
+      );
     }
 
     return projects;
@@ -174,20 +200,12 @@ CREATE TABLE sessions (
 
   Future<int> delete(int id) async {
     final db = await instance.database;
-    return await db.delete(
-      'projects',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    return await db.delete('projects', where: 'id = ?', whereArgs: [id]);
   }
 
   Future<int> deleteSession(int id) async {
     final db = await instance.database;
-    return await db.delete(
-      'sessions',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    return await db.delete('sessions', where: 'id = ?', whereArgs: [id]);
   }
 
   Future close() async {

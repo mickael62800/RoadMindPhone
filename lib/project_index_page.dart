@@ -1,13 +1,35 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:roadmindphone/database_helper.dart';
-import 'package:roadmindphone/main.dart';
-import 'package:flutter_map/flutter_map.dart'; // Import for MapOptions and MapController
-
+import 'package:roadmindphone/export_data_page.dart';
+import 'package:roadmindphone/features/project/domain/entities/project_entity.dart';
+import 'package:roadmindphone/features/project/presentation/bloc/project_bloc.dart';
+import 'package:roadmindphone/features/project/presentation/bloc/project_event.dart';
+import 'package:roadmindphone/features/project/presentation/bloc/project_state.dart';
+import 'package:roadmindphone/features/session/presentation/bloc/session_bloc.dart';
+import 'package:roadmindphone/features/session/presentation/bloc/session_event.dart';
+import 'package:roadmindphone/features/session/presentation/bloc/session_state.dart';
+import 'package:roadmindphone/project.dart';
+import 'package:roadmindphone/session.dart';
 import 'package:roadmindphone/session_completion_page.dart';
 import 'package:roadmindphone/session_index_page.dart';
-import 'package:roadmindphone/export_data_page.dart';
+import 'package:roadmindphone/src/ui/molecules/molecules.dart';
+import 'package:roadmindphone/src/ui/organisms/organisms.dart';
 
-import 'package:roadmindphone/session.dart';
+/// Extension to convert legacy Project to ProjectEntity
+extension ProjectToEntity on Project {
+  ProjectEntity toEntity() {
+    return ProjectEntity(
+      id: id,
+      title: title,
+      description: description,
+      sessionCount: sessionCount,
+      duration: duration,
+      createdAt: DateTime.now(), // Legacy Project doesn't have createdAt
+    );
+  }
+}
 
 typedef FlutterMapBuilder =
     Widget Function({
@@ -47,86 +69,72 @@ class ProjectIndexPage extends StatefulWidget {
 
 class _ProjectIndexPageState extends State<ProjectIndexPage> {
   late Project _project;
-  late Future<List<Session>> _sessions;
 
   @override
   void initState() {
     super.initState();
     _project = widget.project;
-    _refreshSessions();
-  }
-
-  Future<void> _refreshSessions() async {
-    setState(() {
-      _sessions = DatabaseHelper.instance.readAllSessionsForProject(
-        _project.id!,
+    Future.microtask(() {
+      if (!mounted) return;
+      context.read<SessionBloc>().add(
+        LoadSessionsForProjectEvent(_project.id!),
       );
     });
   }
 
-  Future<Session> _addSession(String name) async {
-    final session = Session(
-      projectId: _project.id!,
-      name: name,
-      duration: Duration.zero, // Default duration
-      gpsPoints: 0,
-    );
-    final newSession = await DatabaseHelper.instance.createSession(session);
-    _refreshSessions();
-    return newSession;
-  }
-
   void _showAddSessionDialog() async {
-    final TextEditingController controller = TextEditingController();
-    await showDialog(
+    final projectId = _project.id!;
+
+    final String? name = await showAddItemDialog(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Nouvelle Session'),
-          content: TextField(
-            controller: controller,
-            decoration: const InputDecoration(hintText: "Nom de la session"),
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('ANNULER'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-            TextButton(
-              child: const Text('AJOUTER'),
-              onPressed: () async {
-                if (controller.text.isNotEmpty) {
-                  final newSession = await _addSession(controller.text);
-                  if (!context.mounted) return;
-                  Navigator.of(context).pop(); // Close the dialog
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => SessionCompletionPage(
-                        session: newSession,
-                        flutterMapBuilder: widget.flutterMapBuilder,
-                      ),
-                    ),
-                  );
-                  _refreshSessions();
-                } else {
-                  Navigator.of(context).pop(); // Close the dialog
-                }
-              },
-            ),
-          ],
-        );
-      },
+      title: 'Nouvelle Session',
+      hintText: 'Nom de la session',
     );
+
+    if (name != null) {
+      try {
+        // Create session via DatabaseHelper for immediate result
+        final createdSession = await DatabaseHelper.instance.createSession(
+          Session(
+            projectId: projectId,
+            name: name,
+            duration: const Duration(),
+            gpsPoints: 0,
+          ),
+        );
+
+        if (!mounted) return;
+
+        // Capture navigator before async operation
+        final navigator = Navigator.of(context);
+        final sessionBloc = context.read<SessionBloc>();
+
+        await navigator.push(
+          MaterialPageRoute(
+            builder: (context) => SessionCompletionPage(
+              session: createdSession,
+              flutterMapBuilder: widget.flutterMapBuilder,
+            ),
+          ),
+        );
+
+        if (!mounted) return;
+        // Reload sessions via SessionBloc
+        sessionBloc.add(LoadSessionsForProjectEvent(projectId));
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Erreur: $e')));
+      }
+    }
   }
 
   String _formatDuration(Duration duration) {
     String twoDigits(int n) => n.toString().padLeft(2, '0');
     String twoDigitMinutes = twoDigits(duration.inMinutes.remainder(60));
     String twoDigitSeconds = twoDigits(duration.inSeconds.remainder(60));
-    return "${twoDigits(duration.inHours)}:$twoDigitMinutes:$twoDigitSeconds";
+    return '${twoDigits(duration.inHours)}:$twoDigitMinutes:$twoDigitSeconds';
   }
 
   @override
@@ -137,16 +145,26 @@ class _ProjectIndexPageState extends State<ProjectIndexPage> {
         title: Text(_project.title),
         actions: <Widget>[
           PopupMenuButton<String>(
-            onSelected: (value) {
+            onSelected: (value) async {
               if (value == 'Editer') {
                 _showRenameDialog();
               } else if (value == 'Supprimer') {
                 _showDeleteConfirmationDialog();
               } else if (value == 'Exporter') {
-                Navigator.push(
-                  context,
+                // Capture navigator before async operation
+                final navigator = Navigator.of(context);
+
+                // Get sessions from DatabaseHelper for export
+                final sessions = await DatabaseHelper.instance
+                    .readAllSessionsForProject(_project.id!);
+                if (!mounted) return;
+
+                navigator.push(
                   MaterialPageRoute(
-                    builder: (context) => ExportDataPage(project: _project),
+                    builder: (context) => ExportDataPage(
+                      project: _project.toEntity(),
+                      sessions: sessions,
+                    ),
                   ),
                 );
               } else {
@@ -164,82 +182,76 @@ class _ProjectIndexPageState extends State<ProjectIndexPage> {
           ),
         ],
       ),
-      body: FutureBuilder<List<Session>>(
-        future: _sessions,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  Icon(Icons.folder_open, size: 80.0),
-                  SizedBox(height: 16.0),
-                  Text('Aucune session pour le moment.'),
-                ],
-              ),
-            );
-          } else {
-            final sessions = snapshot.data!;
-            Widget sessionCard(Session session) {
-              return Card(
-                margin: const EdgeInsets.symmetric(
-                  vertical: 4.0,
-                  horizontal: 8.0,
-                ),
-                elevation: 4.0,
-                child: ListTile(
-                  title: Text(session.name),
-                  subtitle: Text(
-                    'Durée: ${_formatDuration(session.duration)} | GPS Points: ${session.gpsPoints}',
-                  ),
-                  onTap: () async {
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => SessionIndexPage(
-                          session: session,
-                          flutterMapBuilder: widget.flutterMapBuilder,
-                        ),
-                      ),
-                    );
-                    if (!context.mounted) return;
-                    _refreshSessions();
-                  },
-                ),
-              );
-            }
+      body: BlocBuilder<SessionBloc, SessionState>(
+        builder: (context, state) {
+          final projectId = _project.id!;
 
-            return OrientationBuilder(
-              builder: (context, orientation) {
-                if (orientation == Orientation.landscape) {
-                  return GridView.builder(
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          childAspectRatio: 4,
-                        ),
-                    itemCount: sessions.length,
-                    itemBuilder: (context, index) {
-                      final session = sessions[index];
-                      return sessionCard(session);
-                    },
-                  );
-                } else {
-                  return ListView.builder(
-                    itemCount: sessions.length,
-                    itemBuilder: (context, index) {
-                      final session = sessions[index];
-                      return sessionCard(session);
-                    },
-                  );
+          // Determine loading state
+          final bool isLoading = state is SessionLoading;
+
+          // Determine error state
+          final String? error = state is SessionError ? state.message : null;
+
+          // Get sessions list
+          final List<Session> sessions;
+          if (state is SessionsLoaded) {
+            sessions = state.sessions.map((entity) {
+              // Convert SessionEntity back to Session for UI
+              return Session(
+                id: entity.id,
+                projectId: entity.projectId,
+                name: entity.name,
+                duration: entity.duration,
+                gpsPoints: entity.gpsPoints,
+                videoPath: entity.videoPath,
+                gpsData: entity.gpsData,
+                startTime: entity.startTime,
+                endTime: entity.endTime,
+                notes: entity.notes,
+              );
+            }).toList();
+          } else {
+            sessions = [];
+          }
+
+          final bool isEmpty = sessions.isEmpty && !isLoading;
+
+          return StatefulWrapper(
+            isLoading: isLoading && sessions.isEmpty,
+            error: error,
+            isEmpty: isEmpty,
+            onRetry: () {
+              context.read<SessionBloc>().add(
+                LoadSessionsForProjectEvent(projectId),
+              );
+            },
+            emptyMessage: 'Aucune session pour le moment.',
+            child: ItemsListView<Session>(
+              items: sessions,
+              titleBuilder: (session) => session.name,
+              subtitleBuilder: (session) =>
+                  'Durée: ${_formatDuration(session.duration)} | GPS Points: ${session.gpsPoints}',
+              onTapBuilder: (session) async {
+                if (!mounted) return;
+
+                // Capture context before async operation
+                final navigator = Navigator.of(context);
+                final sessionBloc = context.read<SessionBloc>();
+
+                final bool? hasChanged = await navigator.push<bool>(
+                  MaterialPageRoute(
+                    builder: (context) => SessionIndexPage(
+                      session: session,
+                      flutterMapBuilder: widget.flutterMapBuilder,
+                    ),
+                  ),
+                );
+                if (hasChanged == true && mounted) {
+                  sessionBloc.add(LoadSessionsForProjectEvent(projectId));
                 }
               },
-            );
-          }
+            ),
+          );
         },
       ),
       floatingActionButton: FloatingActionButton(
@@ -250,76 +262,77 @@ class _ProjectIndexPageState extends State<ProjectIndexPage> {
     );
   }
 
-  void _showDeleteConfirmationDialog() {
-    showDialog(
+  void _showDeleteConfirmationDialog() async {
+    if (!mounted) return;
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final projectBloc = context.read<ProjectBloc>();
+
+    final confirmed = await showConfirmationDialog(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Supprimer le projet'),
-          content: const Text('Êtes-vous sûr de vouloir supprimer ce projet ?'),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('ANNULER'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-            TextButton(
-              child: const Text('SUPPRIMER'),
-              onPressed: () async {
-                await DatabaseHelper.instance.delete(_project.id!);
-                if (!context.mounted) return;
-                Navigator.of(context).pop(); // Close the dialog
-                Navigator.of(context).pop(); // Go back to the previous screen
-              },
-            ),
-          ],
-        );
-      },
+      title: 'Supprimer le projet',
+      content: 'Êtes-vous sûr de vouloir supprimer ce projet ?',
+      confirmText: 'SUPPRIMER',
     );
+
+    if (confirmed == true) {
+      projectBloc.add(DeleteProjectEvent(projectId: _project.id!));
+
+      // Wait for the deletion result
+      await for (final state in projectBloc.stream) {
+        if (state is ProjectOperationSuccess) {
+          if (!mounted) return;
+          messenger.showSnackBar(
+            const SnackBar(content: Text('Projet supprimé')),
+          );
+          navigator.pop(true); // Return true to indicate deletion
+          break;
+        } else if (state is ProjectError) {
+          if (!mounted) return;
+          messenger.showSnackBar(
+            SnackBar(content: Text('Erreur: ${state.message}')),
+          );
+          break;
+        }
+      }
+    }
   }
 
   void _showRenameDialog() async {
-    final TextEditingController controller = TextEditingController(
-      text: _project.title,
-    );
-    final newTitle = await showDialog<String>(
+    final newTitle = await showRenameDialog(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Renommer le projet'),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            decoration: const InputDecoration(
-              hintText: "Nouveau titre du projet",
-            ),
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('ANNULER'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-            TextButton(
-              child: const Text('RENOMMER'),
-              onPressed: () {
-                Navigator.of(context).pop(controller.text);
-              },
-            ),
-          ],
-        );
-      },
+      title: 'Renommer le projet',
+      hintText: 'Nouveau titre du projet',
+      initialValue: _project.title,
     );
 
     if (newTitle != null && newTitle.isNotEmpty) {
-      final updatedProject = _project.copy(title: newTitle);
-      await DatabaseHelper.instance.update(updatedProject);
       if (!mounted) return;
-      setState(() {
-        _project = updatedProject;
-      });
+      final projectBloc = context.read<ProjectBloc>();
+      final updatedProject = _project.copy(title: newTitle);
+      final messenger = ScaffoldMessenger.of(context);
+
+      projectBloc.add(UpdateProjectEvent(project: updatedProject.toEntity()));
+
+      // Wait for the update result
+      await for (final state in projectBloc.stream) {
+        if (state is ProjectOperationSuccess) {
+          if (!mounted) return;
+          setState(() {
+            _project = updatedProject;
+          });
+          messenger.showSnackBar(
+            const SnackBar(content: Text('Projet renommé avec succès')),
+          );
+          break;
+        } else if (state is ProjectError) {
+          if (!mounted) return;
+          messenger.showSnackBar(
+            SnackBar(content: Text('Erreur: ${state.message}')),
+          );
+          break;
+        }
+      }
     }
   }
 }

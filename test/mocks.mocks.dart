@@ -24,7 +24,7 @@ import 'package:mockito/src/dummies.dart' as _i13;
 import 'package:permission_handler_platform_interface/permission_handler_platform_interface.dart'
     as _i22;
 import 'package:roadmindphone/database_helper.dart' as _i15;
-import 'package:roadmindphone/main.dart' as _i4;
+import 'package:roadmindphone/project.dart' as _i4;
 import 'package:roadmindphone/session.dart' as _i5;
 import 'package:roadmindphone/session_gps_point.dart' as _i20;
 import 'package:shared_preferences/src/shared_preferences_legacy.dart' as _i19;
@@ -1096,6 +1096,79 @@ class MockSharedPreferences extends _i1.Mock implements _i19.SharedPreferences {
             returnValueForMissingStub: _i11.Future<void>.value(),
           )
           as _i11.Future<void>);
+}
+
+/// A class which mocks [Project].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockProject extends _i1.Mock implements _i4.Project {
+  MockProject() {
+    _i1.throwOnMissingStub(this);
+  }
+
+  @override
+  String get title =>
+      (super.noSuchMethod(
+            Invocation.getter(#title),
+            returnValue: _i13.dummyValue<String>(
+              this,
+              Invocation.getter(#title),
+            ),
+          )
+          as String);
+
+  @override
+  int get sessionCount =>
+      (super.noSuchMethod(Invocation.getter(#sessionCount), returnValue: 0)
+          as int);
+
+  @override
+  Duration get duration =>
+      (super.noSuchMethod(
+            Invocation.getter(#duration),
+            returnValue: _FakeDuration_8(this, Invocation.getter(#duration)),
+          )
+          as Duration);
+
+  @override
+  _i4.Project copy({
+    int? id,
+    String? title,
+    String? description,
+    int? sessionCount,
+    Duration? duration,
+    List<_i5.Session>? sessions,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(#copy, [], {
+              #id: id,
+              #title: title,
+              #description: description,
+              #sessionCount: sessionCount,
+              #duration: duration,
+              #sessions: sessions,
+            }),
+            returnValue: _FakeProject_3(
+              this,
+              Invocation.method(#copy, [], {
+                #id: id,
+                #title: title,
+                #description: description,
+                #sessionCount: sessionCount,
+                #duration: duration,
+                #sessions: sessions,
+              }),
+            ),
+          )
+          as _i4.Project);
+
+  @override
+  Map<String, dynamic> toMap() =>
+      (super.noSuchMethod(
+            Invocation.method(#toMap, []),
+            returnValue: <String, dynamic>{},
+          )
+          as Map<String, dynamic>);
 }
 
 /// A class which mocks [Session].
