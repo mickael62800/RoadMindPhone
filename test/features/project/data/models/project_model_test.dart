@@ -56,10 +56,10 @@ void main() {
           'id': 1,
           'title': 'Map Project',
           'description': 'Map Description',
-          'sessionCount': 5,
+          'session_count': 5,
           'duration': 9000000, // 2h 30min in milliseconds
-          'createdAt': tCreatedAt.toIso8601String(),
-          'updatedAt': tUpdatedAt.toIso8601String(),
+          'created_at': tCreatedAt.toIso8601String(),
+          'updated_at': tUpdatedAt.toIso8601String(),
         };
 
         final model = ProjectModel.fromMap(map);
@@ -76,7 +76,7 @@ void main() {
       test('should create model from map without optional fields', () {
         final map = {
           'title': 'Minimal Project',
-          'createdAt': tCreatedAt.toIso8601String(),
+          'created_at': tCreatedAt.toIso8601String(),
         };
 
         final model = ProjectModel.fromMap(map);
@@ -93,7 +93,7 @@ void main() {
       test('should handle null sessionCount with default 0', () {
         final map = {
           'title': 'Project',
-          'createdAt': tCreatedAt.toIso8601String(),
+          'created_at': tCreatedAt.toIso8601String(),
         };
 
         final model = ProjectModel.fromMap(map);
@@ -104,7 +104,7 @@ void main() {
       test('should handle null duration with default 0', () {
         final map = {
           'title': 'Project',
-          'createdAt': tCreatedAt.toIso8601String(),
+          'created_at': tCreatedAt.toIso8601String(),
         };
 
         final model = ProjectModel.fromMap(map);
@@ -161,10 +161,10 @@ void main() {
         expect(map['id'], 1);
         expect(map['title'], 'Test Project');
         expect(map['description'], 'Test Description');
-        expect(map['sessionCount'], 5);
+        expect(map['session_count'], 5);
         expect(map['duration'], 9000000); // 2h 30min in milliseconds
-        expect(map['createdAt'], tCreatedAt.toIso8601String());
-        expect(map['updatedAt'], tUpdatedAt.toIso8601String());
+        expect(map['created_at'], tCreatedAt.toIso8601String());
+        expect(map['updated_at'], tUpdatedAt.toIso8601String());
       });
 
       test('should convert model to map without null fields', () {
@@ -175,10 +175,10 @@ void main() {
         expect(map.containsKey('id'), isFalse);
         expect(map['title'], 'Simple');
         expect(map.containsKey('description'), isFalse);
-        expect(map['sessionCount'], 0);
+        expect(map['session_count'], 0);
         expect(map['duration'], 0);
-        expect(map['createdAt'], tCreatedAt.toIso8601String());
-        expect(map.containsKey('updatedAt'), isFalse);
+        expect(map['created_at'], tCreatedAt.toIso8601String());
+        expect(map.containsKey('updated_at'), isFalse);
       });
 
       test('should store duration as milliseconds', () {

@@ -1757,6 +1757,7 @@ class MockCameraValue extends _i1.Mock implements _i10.CameraValue {
 /// A class which mocks [Permission].
 ///
 /// See the documentation for Mockito's code generation for more information.
+// ignore: must_be_immutable
 class MockPermission extends _i1.Mock implements _i22.Permission {
   MockPermission() {
     _i1.throwOnMissingStub(this);

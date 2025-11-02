@@ -36,11 +36,11 @@ class ProjectModel extends ProjectEntity {
       id: map['id'] as int?,
       title: map['title'] as String,
       description: map['description'] as String?,
-      sessionCount: map['sessionCount'] as int? ?? 0,
+      sessionCount: map['session_count'] as int? ?? 0,
       duration: Duration(milliseconds: map['duration'] as int? ?? 0),
-      createdAt: DateTime.parse(map['createdAt'] as String),
-      updatedAt: map['updatedAt'] != null
-          ? DateTime.parse(map['updatedAt'] as String)
+      createdAt: DateTime.parse(map['created_at'] as String),
+      updatedAt: map['updated_at'] != null
+          ? DateTime.parse(map['updated_at'] as String)
           : null,
     );
   }
@@ -66,10 +66,10 @@ class ProjectModel extends ProjectEntity {
       if (id != null) 'id': id,
       'title': title,
       if (description != null) 'description': description,
-      'sessionCount': sessionCount,
+      'session_count': sessionCount,
       'duration': duration.inMilliseconds,
-      'createdAt': createdAt.toIso8601String(),
-      if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
+      'created_at': createdAt.toIso8601String(),
+      if (updatedAt != null) 'updated_at': updatedAt!.toIso8601String(),
     };
   }
 
