@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:roadmindphone/features/project/presentation/bloc/bloc.dart';
 import 'package:roadmindphone/features/project/domain/entities/project_entity.dart';
+import 'package:roadmindphone/features/project/presentation/pages/project_detail_page.dart';
 import 'package:roadmindphone/src/ui/organisms/organisms.dart';
 import 'package:roadmindphone/settings_page.dart';
 
@@ -157,11 +158,21 @@ class _ProjectListPageState extends State<ProjectListPage> {
               subtitleBuilder: (project) =>
                   'Sessions: ${project.sessionCount} | Durée: ${_formatDuration(project.duration)}',
               onTapBuilder: (project) async {
-                // TODO: Navigate to project details page
-                // For now, just show a snackbar
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Ouvrir projet: ${project.title}')),
+                // Navigate to project details page
+                final result = await Navigator.push<bool>(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => BlocProvider.value(
+                      value: context.read<ProjectBloc>(),
+                      child: ProjectDetailPage(project: project),
+                    ),
+                  ),
                 );
+
+                // Reload projects if project was modified or deleted
+                if (result == true && mounted) {
+                  context.read<ProjectBloc>().add(const LoadProjectsEvent());
+                }
               },
             ),
           );
