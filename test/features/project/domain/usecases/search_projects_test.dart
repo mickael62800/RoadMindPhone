@@ -120,7 +120,10 @@ void main() {
 
       expect(result.isRight(), true);
       result.fold((failure) => fail('Should not fail'), (projects) {
-        expect(projects.length, 3); // "Mobile app", "web application", "Angular App"
+        expect(
+          projects.length,
+          3,
+        ); // "Mobile app", "web application", "Angular App"
       });
     });
   });

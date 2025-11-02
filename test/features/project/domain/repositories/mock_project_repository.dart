@@ -73,7 +73,8 @@ class MockProjectRepository implements ProjectRepository {
 
   @override
   Future<Either<Failure, ProjectEntity>> updateProject(
-      ProjectEntity project) async {
+    ProjectEntity project,
+  ) async {
     if (shouldFailOnUpdate) {
       return Left(failureToReturn ?? const DatabaseFailure('Update failed'));
     }
@@ -116,7 +117,8 @@ class MockProjectRepository implements ProjectRepository {
 
   @override
   Future<Either<Failure, List<ProjectEntity>>> searchProjects(
-      String query) async {
+    String query,
+  ) async {
     if (shouldFailOnSearch) {
       return Left(failureToReturn ?? const DatabaseFailure('Search failed'));
     }
