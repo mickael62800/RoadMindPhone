@@ -110,16 +110,16 @@ class Project {
   Map<String, dynamic> toMap() => {
     'id': id,
     'title': title,
-        'description': description,
-      };
+    'description': description,
+  };
 }
 
 /// Legacy MyHomePage widget for backward compatibility with tests
-/// 
+///
 /// This widget is kept to maintain compatibility with:
 /// - test/main_page_widget_test.dart
 /// - test/main_page_with_store_test.dart
-/// 
+///
 /// New code should use ProjectListPage from Clean Architecture.
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});

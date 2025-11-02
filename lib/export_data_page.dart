@@ -1,14 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:roadmindphone/main.dart'; // Import Project class
+import 'package:roadmindphone/features/project/domain/entities/project_entity.dart';
+import 'package:roadmindphone/session.dart';
 import 'package:http/http.dart' as http;
 import 'dart:io' as io;
 import 'dart:convert' as json;
 
 class ExportDataPage extends StatefulWidget {
-  final Project project;
+  final ProjectEntity project;
+  final List<Session> sessions; // Add sessions list
   final http.Client? httpClient; // Add optional http.Client
 
-  const ExportDataPage({super.key, required this.project, this.httpClient});
+  const ExportDataPage({
+    super.key,
+    required this.project,
+    this.sessions = const [],
+    this.httpClient,
+  });
 
   @override
   State<ExportDataPage> createState() => _ExportDataPageState();
@@ -121,7 +128,7 @@ class _ExportDataPageState extends State<ExportDataPage> {
     final projectData = {
       'name': widget.project.title,
       'description': widget.project.description ?? '',
-      'sessions': (widget.project.sessions ?? [])
+      'sessions': widget.sessions
           .map(
             (session) => {
               'id': session.id ?? 0, // Provide 0 if id is null
@@ -153,7 +160,7 @@ class _ExportDataPageState extends State<ExportDataPage> {
     request.fields['ProjectData'] = json.jsonEncode(projectData);
 
     // Add video files
-    for (final session in (widget.project.sessions ?? [])) {
+    for (final session in widget.sessions) {
       if (session.videoPath != null &&
           io.File(session.videoPath!).existsSync()) {
         request.files.add(
@@ -217,7 +224,7 @@ class _ExportDataPageState extends State<ExportDataPage> {
       'id': widget.project.id,
       'name': widget.project.title,
       'description': widget.project.description ?? '',
-      'sessions': (widget.project.sessions ?? [])
+      'sessions': widget.sessions
           .map(
             (session) => {
               'id':
@@ -254,7 +261,7 @@ class _ExportDataPageState extends State<ExportDataPage> {
     request.fields['ProjectData'] = json.jsonEncode(projectData);
 
     // Add video files (for new or updated videos)
-    for (final session in (widget.project.sessions ?? [])) {
+    for (final session in widget.sessions) {
       if (session.videoPath != null &&
           io.File(session.videoPath!).existsSync()) {
         request.files.add(

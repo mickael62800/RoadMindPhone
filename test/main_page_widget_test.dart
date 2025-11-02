@@ -24,23 +24,23 @@ void main() {
       await tester.pumpWidget(
         ChangeNotifierProvider<ProjectStore>.value(
           value: mockStore,
-          child: const MaterialApp(
-            home: MyHomePage(title: 'Test App'),
-          ),
+          child: const MaterialApp(home: MyHomePage(title: 'Test App')),
         ),
       );
       await tester.pump();
     }
 
-    testWidgets('Displays loading indicator when loading',
-        (WidgetTester tester) async {
+    testWidgets('Displays loading indicator when loading', (
+      WidgetTester tester,
+    ) async {
       when(mockStore.isLoading).thenReturn(true);
       await pumpMyApp(tester);
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
     });
 
-    testWidgets('Displays no projects message when no projects exist',
-        (WidgetTester tester) async {
+    testWidgets('Displays no projects message when no projects exist', (
+      WidgetTester tester,
+    ) async {
       await pumpMyApp(tester);
       expect(find.text('Aucun projet pour le moment.'), findsOneWidget);
       expect(find.byIcon(Icons.folder_open), findsOneWidget);
@@ -48,8 +48,7 @@ void main() {
 
     testWidgets('Can add a new project', (WidgetTester tester) async {
       final newProject = Project(id: 1, title: 'New Test Project');
-      when(mockStore.createProject(any))
-          .thenAnswer((_) async => newProject);
+      when(mockStore.createProject(any)).thenAnswer((_) async => newProject);
       when(mockStore.projects).thenReturn([newProject]);
       when(mockStore.hasProjects).thenReturn(true);
 
@@ -80,8 +79,9 @@ void main() {
       expect(find.text('Existing Project 2'), findsOneWidget);
     });
 
-    testWidgets('Displays error message when an error occurs',
-        (WidgetTester tester) async {
+    testWidgets('Displays error message when an error occurs', (
+      WidgetTester tester,
+    ) async {
       when(mockStore.error).thenReturn('Failed to load');
       await pumpMyApp(tester);
       expect(find.text('Failed to load'), findsOneWidget);
@@ -95,10 +95,7 @@ void main() {
       await tester.tap(find.widgetWithText(ElevatedButton, 'Réessayer'));
       await tester.pumpAndSettle();
 
-      verifyInOrder([
-        mockStore.clearError(),
-        mockStore.loadProjects(),
-      ]);
+      verifyInOrder([mockStore.clearError(), mockStore.loadProjects()]);
     });
   });
 }

@@ -1,15 +1,33 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:provider/provider.dart';
 import 'package:roadmindphone/export_data_page.dart';
+import 'package:roadmindphone/features/project/domain/entities/project_entity.dart';
+import 'package:roadmindphone/features/project/presentation/bloc/project_bloc.dart';
+import 'package:roadmindphone/features/project/presentation/bloc/project_event.dart';
+import 'package:roadmindphone/features/project/presentation/bloc/project_state.dart';
 import 'package:roadmindphone/main.dart';
 import 'package:roadmindphone/session.dart';
 import 'package:roadmindphone/session_completion_page.dart';
 import 'package:roadmindphone/session_index_page.dart';
-import 'package:roadmindphone/stores/project_store.dart';
 import 'package:roadmindphone/stores/session_store.dart';
 import 'package:roadmindphone/src/ui/molecules/molecules.dart';
 import 'package:roadmindphone/src/ui/organisms/organisms.dart';
+
+/// Extension to convert legacy Project to ProjectEntity
+extension ProjectToEntity on Project {
+  ProjectEntity toEntity() {
+    return ProjectEntity(
+      id: id,
+      title: title,
+      description: description,
+      sessionCount: sessionCount,
+      duration: duration,
+      createdAt: DateTime.now(), // Legacy Project doesn't have createdAt
+    );
+  }
+}
 
 typedef FlutterMapBuilder =
     Widget Function({
@@ -118,10 +136,15 @@ class _ProjectIndexPageState extends State<ProjectIndexPage> {
               } else if (value == 'Supprimer') {
                 _showDeleteConfirmationDialog();
               } else if (value == 'Exporter') {
+                final sessionStore = context.read<SessionStore>();
+                final sessions = sessionStore.sessionsForProject(_project.id!);
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => ExportDataPage(project: _project),
+                    builder: (context) => ExportDataPage(
+                      project: _project.toEntity(),
+                      sessions: sessions,
+                    ),
                   ),
                 );
               } else {
@@ -190,7 +213,7 @@ class _ProjectIndexPageState extends State<ProjectIndexPage> {
     if (!mounted) return;
     final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
-    final projectStore = context.read<ProjectStore>();
+    final projectBloc = context.read<ProjectBloc>();
 
     final confirmed = await showConfirmationDialog(
       context: context,
@@ -200,16 +223,24 @@ class _ProjectIndexPageState extends State<ProjectIndexPage> {
     );
 
     if (confirmed == true) {
-      try {
-        await projectStore.deleteProject(_project.id!);
-        if (!mounted) return;
-        messenger.showSnackBar(
-          const SnackBar(content: Text('Projet supprimé')),
-        );
-        navigator.pop();
-      } catch (e) {
-        if (!mounted) return;
-        messenger.showSnackBar(SnackBar(content: Text('Erreur: $e')));
+      projectBloc.add(DeleteProjectEvent(projectId: _project.id!));
+
+      // Wait for the deletion result
+      await for (final state in projectBloc.stream) {
+        if (state is ProjectOperationSuccess) {
+          if (!mounted) return;
+          messenger.showSnackBar(
+            const SnackBar(content: Text('Projet supprimé')),
+          );
+          navigator.pop(true); // Return true to indicate deletion
+          break;
+        } else if (state is ProjectError) {
+          if (!mounted) return;
+          messenger.showSnackBar(
+            SnackBar(content: Text('Erreur: ${state.message}')),
+          );
+          break;
+        }
       }
     }
   }
@@ -224,22 +255,30 @@ class _ProjectIndexPageState extends State<ProjectIndexPage> {
 
     if (newTitle != null && newTitle.isNotEmpty) {
       if (!mounted) return;
-      final projectStore = context.read<ProjectStore>();
+      final projectBloc = context.read<ProjectBloc>();
       final updatedProject = _project.copy(title: newTitle);
       final messenger = ScaffoldMessenger.of(context);
 
-      try {
-        await projectStore.updateProject(updatedProject);
-        if (!mounted) return;
-        setState(() {
-          _project = updatedProject;
-        });
-        messenger.showSnackBar(
-          const SnackBar(content: Text('Projet renommé avec succès')),
-        );
-      } catch (e) {
-        if (!mounted) return;
-        messenger.showSnackBar(SnackBar(content: Text('Erreur: $e')));
+      projectBloc.add(UpdateProjectEvent(project: updatedProject.toEntity()));
+
+      // Wait for the update result
+      await for (final state in projectBloc.stream) {
+        if (state is ProjectOperationSuccess) {
+          if (!mounted) return;
+          setState(() {
+            _project = updatedProject;
+          });
+          messenger.showSnackBar(
+            const SnackBar(content: Text('Projet renommé avec succès')),
+          );
+          break;
+        } else if (state is ProjectError) {
+          if (!mounted) return;
+          messenger.showSnackBar(
+            SnackBar(content: Text('Erreur: ${state.message}')),
+          );
+          break;
+        }
       }
     }
   }
