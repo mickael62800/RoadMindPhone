@@ -84,11 +84,20 @@ void main() {
       // arrange
       when(
         mockDatabase.query(
-          any,
+          'projects',
           where: anyNamed('where'),
           whereArgs: anyNamed('whereArgs'),
         ),
       ).thenAnswer((_) async => [tProjectMap]);
+
+      // Mock sessions query (empty sessions in this test)
+      when(
+        mockDatabase.query(
+          'sessions',
+          where: anyNamed('where'),
+          whereArgs: anyNamed('whereArgs'),
+        ),
+      ).thenAnswer((_) async => []);
 
       // act
       final result = await dataSource.getProject(tId);
@@ -104,7 +113,7 @@ void main() {
       // arrange
       when(
         mockDatabase.query(
-          any,
+          'projects',
           where: anyNamed('where'),
           whereArgs: anyNamed('whereArgs'),
         ),
@@ -121,7 +130,7 @@ void main() {
       // arrange
       when(
         mockDatabase.query(
-          any,
+          'projects',
           where: anyNamed('where'),
           whereArgs: anyNamed('whereArgs'),
         ),
@@ -162,8 +171,17 @@ void main() {
       () async {
         // arrange
         when(
-          mockDatabase.query(any, orderBy: anyNamed('orderBy')),
+          mockDatabase.query('projects', orderBy: anyNamed('orderBy')),
         ).thenAnswer((_) async => tProjectsList);
+
+        // Mock sessions query for each project (empty sessions in this test)
+        when(
+          mockDatabase.query(
+            'sessions',
+            where: anyNamed('where'),
+            whereArgs: anyNamed('whereArgs'),
+          ),
+        ).thenAnswer((_) async => []);
 
         // act
         final result = await dataSource.getAllProjects();
@@ -180,7 +198,7 @@ void main() {
     test('should return empty list when no projects exist', () async {
       // arrange
       when(
-        mockDatabase.query(any, orderBy: anyNamed('orderBy')),
+        mockDatabase.query('projects', orderBy: anyNamed('orderBy')),
       ).thenAnswer((_) async => []);
 
       // act
@@ -193,7 +211,7 @@ void main() {
     test('should throw DatabaseException when query fails', () async {
       // arrange
       when(
-        mockDatabase.query(any, orderBy: anyNamed('orderBy')),
+        mockDatabase.query('projects', orderBy: anyNamed('orderBy')),
       ).thenThrow(Exception('Query failed'));
 
       // act

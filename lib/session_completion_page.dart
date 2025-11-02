@@ -9,7 +9,6 @@ import 'package:latlong2/latlong.dart';
 import 'package:roadmindphone/database_helper.dart';
 import 'package:roadmindphone/session.dart'; // Import Session class
 import 'package:roadmindphone/session_gps_point.dart';
-import 'package:roadmindphone/features/session/domain/entities/session_entity.dart';
 import 'package:roadmindphone/features/session/presentation/bloc/session_bloc.dart';
 import 'package:roadmindphone/features/session/presentation/bloc/session_event.dart';
 import 'package:roadmindphone/session_index_page.dart'; // Import for SessionToEntity extension
@@ -67,42 +66,128 @@ class _SessionCompletionPageState extends State<SessionCompletionPage> {
   List<SessionGpsPoint> _gpsData = [];
   Duration _duration = Duration.zero;
   late DatabaseHelper _databaseHelper;
+  final MapController _mapController = MapController();
+  bool _isInitializing = true;
 
   @override
   void initState() {
     super.initState();
+    debugPrint(
+      'DEBUG SessionCompletionPage: initState - session.gpsData.length = ${widget.session.gpsData.length}',
+    );
     _databaseHelper = widget.databaseHelper ?? DatabaseHelper.instance;
-    _initializeCamera();
-    _determinePosition();
+    _initialize();
+  }
+
+  Future<void> _initialize() async {
+    await Future.wait([_initializeCamera(), _determinePosition()]);
+
+    setState(() {
+      _isInitializing = false;
+    });
+
+    // Déplacer la carte vers la position actuelle après initialisation
+    if (_currentLocation != null) {
+      debugPrint('DEBUG: Moving map to $_currentLocation after initialization');
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        try {
+          _mapController.move(_currentLocation!, 18.0);
+          debugPrint('DEBUG: Map moved to current location');
+
+          // Forcer un léger mouvement pour déclencher le chargement des tuiles
+          Future.delayed(const Duration(milliseconds: 100), () {
+            try {
+              _mapController.move(
+                LatLng(
+                  _currentLocation!.latitude + 0.00001,
+                  _currentLocation!.longitude,
+                ),
+                18.0,
+              );
+              Future.delayed(const Duration(milliseconds: 50), () {
+                try {
+                  _mapController.move(_currentLocation!, 18.0);
+                } catch (e) {
+                  debugPrint('DEBUG: Error moving map (final): $e');
+                }
+              });
+            } catch (e) {
+              debugPrint('DEBUG: Error moving map (micro): $e');
+            }
+          });
+        } catch (e) {
+          debugPrint('DEBUG: Error moving map (initial): $e');
+        }
+      });
+    }
   }
 
   Future<void> _determinePosition() async {
+    debugPrint('DEBUG: _determinePosition called');
     bool serviceEnabled;
     LocationPermission permission;
 
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
+      debugPrint('DEBUG: Location services are disabled');
       return Future.error('Location services are disabled.');
     }
 
     permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
+      debugPrint('DEBUG: Location permission denied, requesting');
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
+        debugPrint('DEBUG: Location permission denied after request');
         return Future.error('Location permissions are denied');
       }
     }
 
     if (permission == LocationPermission.deniedForever) {
+      debugPrint('DEBUG: Location permission denied forever');
       return Future.error(
         'Location permissions are permanently denied, we cannot request permissions.',
       );
     }
 
+    debugPrint('DEBUG: Getting current position...');
     Position position = await Geolocator.getCurrentPosition();
-    setState(() {
-      _currentLocation = LatLng(position.latitude, position.longitude);
-    });
+    debugPrint(
+      'DEBUG: Position obtained: ${position.latitude}, ${position.longitude}',
+    );
+
+    _currentLocation = LatLng(position.latitude, position.longitude);
+    debugPrint('DEBUG: _currentLocation set to $_currentLocation');
+    debugPrint(
+      'DEBUG: widget.session.gpsData.isEmpty = ${widget.session.gpsData.isEmpty}',
+    );
+
+    // Si la session n'a pas de points GPS (nouveau ou "Refaire"),
+    // ajouter un point GPS temporaire à la position actuelle pour centrer la carte
+    if (widget.session.gpsData.isEmpty) {
+      debugPrint('DEBUG: Creating temporary GPS point');
+      _gpsData = [
+        SessionGpsPoint(
+          sessionId: widget.session.id!,
+          latitude: position.latitude,
+          longitude: position.longitude,
+          speed: position.speed,
+          heading: position.heading,
+          timestamp: position.timestamp,
+          videoTimestampMs: 0,
+        ),
+      ];
+      debugPrint(
+        'DEBUG: Temporary GPS point created, _gpsData.length = ${_gpsData.length}',
+      );
+    } else {
+      debugPrint(
+        'DEBUG: Using existing GPS data, count = ${widget.session.gpsData.length}',
+      );
+      _gpsData = List.from(widget.session.gpsData);
+    }
+
+    debugPrint('DEBUG: GPS initialization completed');
   }
 
   Future<void> _initializeCamera() async {
@@ -146,6 +231,7 @@ class _SessionCompletionPageState extends State<SessionCompletionPage> {
     setState(() {
       _isRecording = true;
       _duration = Duration.zero;
+      // Réinitialiser les données GPS (supprimer le point temporaire)
       _gpsData = [];
     });
 
@@ -181,10 +267,12 @@ class _SessionCompletionPageState extends State<SessionCompletionPage> {
   }
 
   void _stopRecording() async {
+    debugPrint('DEBUG: _stopRecording called');
     _timer?.cancel();
     _positionStream?.cancel();
 
     final XFile? videoFile = await _cameraController?.stopVideoRecording();
+    debugPrint('DEBUG: Video file path: ${videoFile?.path}');
 
     final updatedSession = widget.session.copy(
       duration: _duration,
@@ -193,9 +281,14 @@ class _SessionCompletionPageState extends State<SessionCompletionPage> {
       videoPath: videoFile?.path,
     );
 
+    debugPrint(
+      'DEBUG: Updated session - id: ${updatedSession.id}, duration: ${updatedSession.duration}, gpsPoints: ${updatedSession.gpsPoints}',
+    );
+
     // Update via SessionBloc
     if (mounted) {
       try {
+        debugPrint('DEBUG: Updating session via BLoC and DatabaseHelper');
         final bloc = context.read<SessionBloc>();
         // Convert to entity using the extension from session_index_page
         final entity = updatedSession.toEntity();
@@ -203,9 +296,12 @@ class _SessionCompletionPageState extends State<SessionCompletionPage> {
 
         // Also update database directly for immediate consistency
         await _databaseHelper.updateSession(updatedSession);
+        debugPrint('DEBUG: Session updated successfully in database');
       } catch (e) {
+        debugPrint('DEBUG: Error updating via BLoC, using fallback: $e');
         // Fallback: update the database directly
         await _databaseHelper.updateSession(updatedSession);
+        debugPrint('DEBUG: Session updated via fallback');
       }
     }
 
@@ -214,6 +310,7 @@ class _SessionCompletionPageState extends State<SessionCompletionPage> {
       _isRecording = false;
     });
 
+    debugPrint('DEBUG: Popping navigation with updated session');
     Navigator.of(context).pop(updatedSession);
   }
 
@@ -234,6 +331,26 @@ class _SessionCompletionPageState extends State<SessionCompletionPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Afficher un loader pendant l'initialisation
+    if (_isInitializing) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text(widget.session.name),
+          backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        ),
+        body: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Initialisation en cours...'),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.session.name),
@@ -283,9 +400,13 @@ class _SessionCompletionPageState extends State<SessionCompletionPage> {
   }
 
   Widget _buildMap() {
+    debugPrint('DEBUG _buildMap: _currentLocation = $_currentLocation');
+    debugPrint('DEBUG _buildMap: _gpsData.length = ${_gpsData.length}');
+
     return _currentLocation == null
         ? const Center(child: CircularProgressIndicator())
         : widget.flutterMapBuilder(
+            mapController: _mapController,
             options: MapOptions(
               initialCenter: _currentLocation ?? const LatLng(50.42, 2.83),
               initialZoom: 18.0,

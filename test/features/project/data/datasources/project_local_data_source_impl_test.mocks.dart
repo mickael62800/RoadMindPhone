@@ -8,7 +8,7 @@ import 'dart:async' as _i5;
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:mockito/src/dummies.dart' as _i7;
 import 'package:roadmindphone/database_helper.dart' as _i6;
-import 'package:roadmindphone/main.dart' as _i3;
+import 'package:roadmindphone/project.dart' as _i3;
 import 'package:roadmindphone/session.dart' as _i4;
 import 'package:sqflite/sqflite.dart' as _i2;
 

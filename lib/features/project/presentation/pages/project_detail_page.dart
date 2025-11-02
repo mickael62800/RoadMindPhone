@@ -3,6 +3,12 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:roadmindphone/features/project/presentation/bloc/bloc.dart';
 import 'package:roadmindphone/features/project/domain/entities/project_entity.dart';
 import 'package:roadmindphone/src/ui/molecules/molecules.dart';
+import 'package:roadmindphone/database_helper.dart';
+import 'package:roadmindphone/session.dart';
+import 'package:roadmindphone/export_data_page.dart';
+import 'package:roadmindphone/session_completion_page.dart';
+import 'package:roadmindphone/session_index_page.dart';
+import 'package:roadmindphone/src/ui/organisms/organisms.dart';
 
 /// Page displaying project details with edit and delete options
 ///
@@ -19,11 +25,37 @@ class ProjectDetailPage extends StatefulWidget {
 
 class _ProjectDetailPageState extends State<ProjectDetailPage> {
   late ProjectEntity _project;
+  late Future<List<Session>> _sessionsFuture;
+  bool _isRefreshingProject = false;
 
   @override
   void initState() {
     super.initState();
     _project = widget.project;
+    _refreshSessions();
+  }
+
+  /// Refresh the sessions list and reload project data
+  void _refreshSessions() {
+    setState(() {
+      _sessionsFuture = DatabaseHelper.instance.readAllSessionsForProject(
+        _project.id!,
+      );
+      _isRefreshingProject = true;
+    });
+
+    // Reload project data to update session count and duration
+    context.read<ProjectBloc>().add(GetProjectEvent(projectId: _project.id!));
+  }
+
+  /// Update project data when bloc state changes
+  void _handleProjectLoaded(ProjectEntity project) {
+    if (_isRefreshingProject && mounted) {
+      setState(() {
+        _project = project;
+        _isRefreshingProject = false;
+      });
+    }
   }
 
   /// Format duration to HH:MM:SS
@@ -63,6 +95,12 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
 
   /// Show dialog to confirm project deletion
   void _showDeleteConfirmationDialog() async {
+    if (!mounted) return;
+
+    // Capture context before async operation
+    final navigator = Navigator.of(context);
+    final projectBloc = context.read<ProjectBloc>();
+
     final confirmed = await showConfirmationDialog(
       context: context,
       title: 'Supprimer le projet',
@@ -74,14 +112,105 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
     if (confirmed == true) {
       if (!mounted) return;
 
-      context.read<ProjectBloc>().add(
-        DeleteProjectEvent(projectId: _project.id!),
-      );
+      projectBloc.add(DeleteProjectEvent(projectId: _project.id!));
 
       // Return to previous screen after a short delay
       await Future.delayed(const Duration(milliseconds: 500));
       if (!mounted) return;
-      Navigator.of(context).pop(true); // Return true to indicate deletion
+      navigator.pop(true); // Return true to indicate deletion
+    }
+  }
+
+  /// Show export data page for this project
+  void _showExportPage() async {
+    if (!mounted) return;
+
+    // Capture navigator before async operation
+    final navigator = Navigator.of(context);
+
+    try {
+      // Get sessions from DatabaseHelper for export
+      final sessions = await DatabaseHelper.instance.readAllSessionsForProject(
+        _project.id!,
+      );
+
+      if (!mounted) return;
+
+      navigator.push(
+        MaterialPageRoute(
+          builder: (context) =>
+              ExportDataPage(project: _project, sessions: sessions),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erreur lors du chargement des sessions: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  /// Show dialog to add a new session
+  void _showAddSessionDialog() async {
+    final String? name = await showAddItemDialog(
+      context: context,
+      title: 'Nouvelle Session',
+      hintText: 'Nom de la session',
+    );
+
+    if (name != null && name.isNotEmpty) {
+      if (!mounted) return;
+
+      try {
+        print(
+          'DEBUG: Creating session with name: $name, projectId: ${_project.id}',
+        );
+
+        // Create session via DatabaseHelper for immediate result
+        final createdSession = await DatabaseHelper.instance.createSession(
+          Session(
+            projectId: _project.id!,
+            name: name,
+            duration: const Duration(),
+            gpsPoints: 0,
+          ),
+        );
+
+        print('DEBUG: Session created with id: ${createdSession.id}');
+
+        if (!mounted) return;
+
+        // Capture navigator before async operation
+        final navigator = Navigator.of(context);
+
+        final result = await navigator.push(
+          MaterialPageRoute(
+            builder: (context) =>
+                SessionCompletionPage(session: createdSession),
+          ),
+        );
+
+        print(
+          'DEBUG: Returned from SessionCompletionPage with result: $result',
+        );
+
+        // Refresh sessions list
+        _refreshSessions();
+
+        // Optionally reload project data here if needed
+      } catch (e) {
+        print('DEBUG: Error creating session: $e');
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur lors de la création de la session: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -99,12 +228,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
               } else if (value == 'Supprimer') {
                 _showDeleteConfirmationDialog();
               } else if (value == 'Exporter') {
-                // TODO: Implement export functionality
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Fonction d\'exportation à venir'),
-                  ),
-                );
+                _showExportPage();
               }
             },
             itemBuilder: (BuildContext context) {
@@ -120,6 +244,10 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
       ),
       body: BlocListener<ProjectBloc, ProjectState>(
         listener: (context, state) {
+          // Update project when loaded after refresh
+          if (state is ProjectLoaded) {
+            _handleProjectLoaded(state.project);
+          }
           // Show snackbar for operation success
           if (state is ProjectOperationSuccess) {
             ScaffoldMessenger.of(
@@ -128,6 +256,11 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
           }
           // Show snackbar for errors
           if (state is ProjectError) {
+            if (_isRefreshingProject) {
+              setState(() {
+                _isRefreshingProject = false;
+              });
+            }
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.message),
@@ -195,38 +328,100 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
               ),
               const SizedBox(height: 16),
               // Sessions section
-              Text('Sessions', style: Theme.of(context).textTheme.titleLarge),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Sessions',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: _showAddSessionDialog,
+                    icon: const Icon(Icons.add),
+                    label: const Text('Nouvelle session'),
+                  ),
+                ],
+              ),
               const SizedBox(height: 8),
               Expanded(
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.video_collection,
-                        size: 64,
-                        color: Colors.grey,
-                      ),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'Aucune session pour le moment.',
-                        style: TextStyle(fontSize: 16, color: Colors.grey),
-                      ),
-                      const SizedBox(height: 16),
-                      ElevatedButton.icon(
-                        onPressed: () {
-                          // TODO: Navigate to create session page
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Création de session à venir'),
+                child: FutureBuilder<List<Session>>(
+                  future: _sessionsFuture,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+
+                    if (snapshot.hasError) {
+                      return Center(
+                        child: Text(
+                          'Erreur: ${snapshot.error}',
+                          style: const TextStyle(color: Colors.red),
+                        ),
+                      );
+                    }
+
+                    final sessions = snapshot.data ?? [];
+
+                    if (sessions.isEmpty) {
+                      return const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(16.0),
+                          child: Text(
+                            'Aucune session pour le moment.',
+                            style: TextStyle(fontSize: 14, color: Colors.grey),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      );
+                    }
+
+                    return ListView.builder(
+                      itemCount: sessions.length,
+                      itemBuilder: (context, index) {
+                        final session = sessions[index];
+                        return Card(
+                          margin: const EdgeInsets.symmetric(
+                            vertical: 4,
+                            horizontal: 0,
+                          ),
+                          child: ListTile(
+                            leading: const Icon(
+                              Icons.videocam,
+                              color: Colors.blue,
                             ),
-                          );
-                        },
-                        icon: const Icon(Icons.add),
-                        label: const Text('Créer une session'),
-                      ),
-                    ],
-                  ),
+                            title: Text(session.name),
+                            subtitle: Text(
+                              'Durée: ${_formatDuration(session.duration)} | GPS: ${session.gpsPoints} points',
+                            ),
+                            trailing: session.videoPath != null
+                                ? const Icon(
+                                    Icons.check_circle,
+                                    color: Colors.green,
+                                  )
+                                : const Icon(
+                                    Icons.warning,
+                                    color: Colors.orange,
+                                  ),
+                            onTap: () async {
+                              // Navigate to session detail page
+                              final result = await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      SessionIndexPage(session: session),
+                                ),
+                              );
+
+                              // Refresh sessions list if session was modified or deleted
+                              if (result == true) {
+                                _refreshSessions();
+                              }
+                            },
+                          ),
+                        );
+                      },
+                    );
+                  },
                 ),
               ),
             ],

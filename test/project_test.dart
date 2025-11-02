@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:roadmindphone/main.dart';
+import 'package:roadmindphone/project.dart';
 
 void main() {
   group('Project', () {

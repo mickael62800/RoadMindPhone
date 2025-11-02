@@ -158,20 +158,26 @@ class _ProjectListPageState extends State<ProjectListPage> {
               subtitleBuilder: (project) =>
                   'Sessions: ${project.sessionCount} | Durée: ${_formatDuration(project.duration)}',
               onTapBuilder: (project) async {
+                if (!mounted) return;
+
+                // Capture context before async operation
+                final navigator = Navigator.of(context);
+                final projectBloc = context.read<ProjectBloc>();
+
                 // Navigate to project details page
-                final result = await Navigator.push<bool>(
-                  context,
+                await navigator.push<bool>(
                   MaterialPageRoute(
                     builder: (context) => BlocProvider.value(
-                      value: context.read<ProjectBloc>(),
+                      value: projectBloc,
                       child: ProjectDetailPage(project: project),
                     ),
                   ),
                 );
 
-                // Reload projects if project was modified or deleted
-                if (result == true && mounted) {
-                  context.read<ProjectBloc>().add(const LoadProjectsEvent());
+                // Always reload projects when returning from detail page
+                // This ensures the list is refreshed with updated session counts and durations
+                if (mounted) {
+                  projectBloc.add(const LoadProjectsEvent());
                 }
               },
             ),

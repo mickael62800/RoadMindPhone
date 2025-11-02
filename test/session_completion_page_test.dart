@@ -247,7 +247,11 @@ void main() {
           ),
         ),
       );
-      await tester.pump();
+
+      // Pump multiple times to let Future.delayed timers complete
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 100));
 
       // Should build without error using default builder
       expect(find.byType(SessionCompletionPage), findsOneWidget);

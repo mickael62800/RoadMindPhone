@@ -24,11 +24,9 @@ import 'package:mockito/src/dummies.dart' as _i13;
 import 'package:permission_handler_platform_interface/permission_handler_platform_interface.dart'
     as _i22;
 import 'package:roadmindphone/database_helper.dart' as _i15;
-import 'package:roadmindphone/main.dart' as _i4;
+import 'package:roadmindphone/project.dart' as _i4;
 import 'package:roadmindphone/session.dart' as _i5;
 import 'package:roadmindphone/session_gps_point.dart' as _i20;
-import 'package:roadmindphone/stores/project_store.dart' as _i23;
-import 'package:roadmindphone/stores/session_store.dart' as _i24;
 import 'package:shared_preferences/src/shared_preferences_legacy.dart' as _i19;
 import 'package:sqflite/sqflite.dart' as _i3;
 
@@ -1100,6 +1098,79 @@ class MockSharedPreferences extends _i1.Mock implements _i19.SharedPreferences {
           as _i11.Future<void>);
 }
 
+/// A class which mocks [Project].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockProject extends _i1.Mock implements _i4.Project {
+  MockProject() {
+    _i1.throwOnMissingStub(this);
+  }
+
+  @override
+  String get title =>
+      (super.noSuchMethod(
+            Invocation.getter(#title),
+            returnValue: _i13.dummyValue<String>(
+              this,
+              Invocation.getter(#title),
+            ),
+          )
+          as String);
+
+  @override
+  int get sessionCount =>
+      (super.noSuchMethod(Invocation.getter(#sessionCount), returnValue: 0)
+          as int);
+
+  @override
+  Duration get duration =>
+      (super.noSuchMethod(
+            Invocation.getter(#duration),
+            returnValue: _FakeDuration_8(this, Invocation.getter(#duration)),
+          )
+          as Duration);
+
+  @override
+  _i4.Project copy({
+    int? id,
+    String? title,
+    String? description,
+    int? sessionCount,
+    Duration? duration,
+    List<_i5.Session>? sessions,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(#copy, [], {
+              #id: id,
+              #title: title,
+              #description: description,
+              #sessionCount: sessionCount,
+              #duration: duration,
+              #sessions: sessions,
+            }),
+            returnValue: _FakeProject_3(
+              this,
+              Invocation.method(#copy, [], {
+                #id: id,
+                #title: title,
+                #description: description,
+                #sessionCount: sessionCount,
+                #duration: duration,
+                #sessions: sessions,
+              }),
+            ),
+          )
+          as _i4.Project);
+
+  @override
+  Map<String, dynamic> toMap() =>
+      (super.noSuchMethod(
+            Invocation.method(#toMap, []),
+            returnValue: <String, dynamic>{},
+          )
+          as Map<String, dynamic>);
+}
+
 /// A class which mocks [Session].
 ///
 /// See the documentation for Mockito's code generation for more information.
@@ -1757,7 +1828,6 @@ class MockCameraValue extends _i1.Mock implements _i10.CameraValue {
 /// A class which mocks [Permission].
 ///
 /// See the documentation for Mockito's code generation for more information.
-// ignore: must_be_immutable
 class MockPermission extends _i1.Mock implements _i22.Permission {
   MockPermission() {
     _i1.throwOnMissingStub(this);
@@ -1766,285 +1836,4 @@ class MockPermission extends _i1.Mock implements _i22.Permission {
   @override
   int get value =>
       (super.noSuchMethod(Invocation.getter(#value), returnValue: 0) as int);
-}
-
-/// A class which mocks [ProjectStore].
-///
-/// See the documentation for Mockito's code generation for more information.
-class MockProjectStore extends _i1.Mock implements _i23.ProjectStore {
-  MockProjectStore() {
-    _i1.throwOnMissingStub(this);
-  }
-
-  @override
-  List<_i4.Project> get projects =>
-      (super.noSuchMethod(
-            Invocation.getter(#projects),
-            returnValue: <_i4.Project>[],
-          )
-          as List<_i4.Project>);
-
-  @override
-  bool get isLoading =>
-      (super.noSuchMethod(Invocation.getter(#isLoading), returnValue: false)
-          as bool);
-
-  @override
-  bool get hasProjects =>
-      (super.noSuchMethod(Invocation.getter(#hasProjects), returnValue: false)
-          as bool);
-
-  @override
-  int get projectCount =>
-      (super.noSuchMethod(Invocation.getter(#projectCount), returnValue: 0)
-          as int);
-
-  @override
-  bool get hasListeners =>
-      (super.noSuchMethod(Invocation.getter(#hasListeners), returnValue: false)
-          as bool);
-
-  @override
-  _i11.Future<void> loadProjects() =>
-      (super.noSuchMethod(
-            Invocation.method(#loadProjects, []),
-            returnValue: _i11.Future<void>.value(),
-            returnValueForMissingStub: _i11.Future<void>.value(),
-          )
-          as _i11.Future<void>);
-
-  @override
-  _i11.Future<_i4.Project> createProject(
-    String? title, {
-    String? description,
-  }) =>
-      (super.noSuchMethod(
-            Invocation.method(
-              #createProject,
-              [title],
-              {#description: description},
-            ),
-            returnValue: _i11.Future<_i4.Project>.value(
-              _FakeProject_3(
-                this,
-                Invocation.method(
-                  #createProject,
-                  [title],
-                  {#description: description},
-                ),
-              ),
-            ),
-          )
-          as _i11.Future<_i4.Project>);
-
-  @override
-  _i11.Future<void> updateProject(_i4.Project? project) =>
-      (super.noSuchMethod(
-            Invocation.method(#updateProject, [project]),
-            returnValue: _i11.Future<void>.value(),
-            returnValueForMissingStub: _i11.Future<void>.value(),
-          )
-          as _i11.Future<void>);
-
-  @override
-  _i11.Future<void> deleteProject(int? projectId) =>
-      (super.noSuchMethod(
-            Invocation.method(#deleteProject, [projectId]),
-            returnValue: _i11.Future<void>.value(),
-            returnValueForMissingStub: _i11.Future<void>.value(),
-          )
-          as _i11.Future<void>);
-
-  @override
-  _i4.Project? getProjectById(int? id) =>
-      (super.noSuchMethod(Invocation.method(#getProjectById, [id]))
-          as _i4.Project?);
-
-  @override
-  _i11.Future<void> refreshProject(int? projectId) =>
-      (super.noSuchMethod(
-            Invocation.method(#refreshProject, [projectId]),
-            returnValue: _i11.Future<void>.value(),
-            returnValueForMissingStub: _i11.Future<void>.value(),
-          )
-          as _i11.Future<void>);
-
-  @override
-  void clearError() => super.noSuchMethod(
-    Invocation.method(#clearError, []),
-    returnValueForMissingStub: null,
-  );
-
-  @override
-  void addListener(_i21.VoidCallback? listener) => super.noSuchMethod(
-    Invocation.method(#addListener, [listener]),
-    returnValueForMissingStub: null,
-  );
-
-  @override
-  void removeListener(_i21.VoidCallback? listener) => super.noSuchMethod(
-    Invocation.method(#removeListener, [listener]),
-    returnValueForMissingStub: null,
-  );
-
-  @override
-  void dispose() => super.noSuchMethod(
-    Invocation.method(#dispose, []),
-    returnValueForMissingStub: null,
-  );
-
-  @override
-  void notifyListeners() => super.noSuchMethod(
-    Invocation.method(#notifyListeners, []),
-    returnValueForMissingStub: null,
-  );
-}
-
-/// A class which mocks [SessionStore].
-///
-/// See the documentation for Mockito's code generation for more information.
-class MockSessionStore extends _i1.Mock implements _i24.SessionStore {
-  MockSessionStore() {
-    _i1.throwOnMissingStub(this);
-  }
-
-  @override
-  bool get hasListeners =>
-      (super.noSuchMethod(Invocation.getter(#hasListeners), returnValue: false)
-          as bool);
-
-  @override
-  List<_i5.Session> sessionsForProject(int? projectId) =>
-      (super.noSuchMethod(
-            Invocation.method(#sessionsForProject, [projectId]),
-            returnValue: <_i5.Session>[],
-          )
-          as List<_i5.Session>);
-
-  @override
-  bool hasSessions(int? projectId) =>
-      (super.noSuchMethod(
-            Invocation.method(#hasSessions, [projectId]),
-            returnValue: false,
-          )
-          as bool);
-
-  @override
-  bool isLoading(int? projectId) =>
-      (super.noSuchMethod(
-            Invocation.method(#isLoading, [projectId]),
-            returnValue: false,
-          )
-          as bool);
-
-  @override
-  String? errorForProject(int? projectId) =>
-      (super.noSuchMethod(Invocation.method(#errorForProject, [projectId]))
-          as String?);
-
-  @override
-  void clearError(int? projectId) => super.noSuchMethod(
-    Invocation.method(#clearError, [projectId]),
-    returnValueForMissingStub: null,
-  );
-
-  @override
-  _i11.Future<void> loadSessions(int? projectId) =>
-      (super.noSuchMethod(
-            Invocation.method(#loadSessions, [projectId]),
-            returnValue: _i11.Future<void>.value(),
-            returnValueForMissingStub: _i11.Future<void>.value(),
-          )
-          as _i11.Future<void>);
-
-  @override
-  _i11.Future<_i5.Session> createSession({
-    required int? projectId,
-    required String? name,
-  }) =>
-      (super.noSuchMethod(
-            Invocation.method(#createSession, [], {
-              #projectId: projectId,
-              #name: name,
-            }),
-            returnValue: _i11.Future<_i5.Session>.value(
-              _FakeSession_4(
-                this,
-                Invocation.method(#createSession, [], {
-                  #projectId: projectId,
-                  #name: name,
-                }),
-              ),
-            ),
-          )
-          as _i11.Future<_i5.Session>);
-
-  @override
-  _i11.Future<void> updateSession(_i5.Session? session) =>
-      (super.noSuchMethod(
-            Invocation.method(#updateSession, [session]),
-            returnValue: _i11.Future<void>.value(),
-            returnValueForMissingStub: _i11.Future<void>.value(),
-          )
-          as _i11.Future<void>);
-
-  @override
-  _i11.Future<void> deleteSession({
-    required int? projectId,
-    required int? sessionId,
-  }) =>
-      (super.noSuchMethod(
-            Invocation.method(#deleteSession, [], {
-              #projectId: projectId,
-              #sessionId: sessionId,
-            }),
-            returnValue: _i11.Future<void>.value(),
-            returnValueForMissingStub: _i11.Future<void>.value(),
-          )
-          as _i11.Future<void>);
-
-  @override
-  _i11.Future<void> refreshSession({
-    required int? projectId,
-    required int? sessionId,
-  }) =>
-      (super.noSuchMethod(
-            Invocation.method(#refreshSession, [], {
-              #projectId: projectId,
-              #sessionId: sessionId,
-            }),
-            returnValue: _i11.Future<void>.value(),
-            returnValueForMissingStub: _i11.Future<void>.value(),
-          )
-          as _i11.Future<void>);
-
-  @override
-  void clearCache() => super.noSuchMethod(
-    Invocation.method(#clearCache, []),
-    returnValueForMissingStub: null,
-  );
-
-  @override
-  void addListener(_i21.VoidCallback? listener) => super.noSuchMethod(
-    Invocation.method(#addListener, [listener]),
-    returnValueForMissingStub: null,
-  );
-
-  @override
-  void removeListener(_i21.VoidCallback? listener) => super.noSuchMethod(
-    Invocation.method(#removeListener, [listener]),
-    returnValueForMissingStub: null,
-  );
-
-  @override
-  void dispose() => super.noSuchMethod(
-    Invocation.method(#dispose, []),
-    returnValueForMissingStub: null,
-  );
-
-  @override
-  void notifyListeners() => super.noSuchMethod(
-    Invocation.method(#notifyListeners, []),
-    returnValueForMissingStub: null,
-  );
 }

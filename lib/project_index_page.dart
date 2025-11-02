@@ -10,7 +10,7 @@ import 'package:roadmindphone/features/project/presentation/bloc/project_state.d
 import 'package:roadmindphone/features/session/presentation/bloc/session_bloc.dart';
 import 'package:roadmindphone/features/session/presentation/bloc/session_event.dart';
 import 'package:roadmindphone/features/session/presentation/bloc/session_state.dart';
-import 'package:roadmindphone/main.dart';
+import 'package:roadmindphone/project.dart';
 import 'package:roadmindphone/session.dart';
 import 'package:roadmindphone/session_completion_page.dart';
 import 'package:roadmindphone/session_index_page.dart';
@@ -104,8 +104,12 @@ class _ProjectIndexPageState extends State<ProjectIndexPage> {
         );
 
         if (!mounted) return;
-        await Navigator.push(
-          context,
+
+        // Capture navigator before async operation
+        final navigator = Navigator.of(context);
+        final sessionBloc = context.read<SessionBloc>();
+
+        await navigator.push(
           MaterialPageRoute(
             builder: (context) => SessionCompletionPage(
               session: createdSession,
@@ -116,7 +120,7 @@ class _ProjectIndexPageState extends State<ProjectIndexPage> {
 
         if (!mounted) return;
         // Reload sessions via SessionBloc
-        context.read<SessionBloc>().add(LoadSessionsForProjectEvent(projectId));
+        sessionBloc.add(LoadSessionsForProjectEvent(projectId));
       } catch (e) {
         if (!mounted) return;
         ScaffoldMessenger.of(
@@ -147,12 +151,15 @@ class _ProjectIndexPageState extends State<ProjectIndexPage> {
               } else if (value == 'Supprimer') {
                 _showDeleteConfirmationDialog();
               } else if (value == 'Exporter') {
+                // Capture navigator before async operation
+                final navigator = Navigator.of(context);
+
                 // Get sessions from DatabaseHelper for export
                 final sessions = await DatabaseHelper.instance
                     .readAllSessionsForProject(_project.id!);
                 if (!mounted) return;
-                Navigator.push(
-                  context,
+
+                navigator.push(
                   MaterialPageRoute(
                     builder: (context) => ExportDataPage(
                       project: _project.toEntity(),
@@ -225,8 +232,13 @@ class _ProjectIndexPageState extends State<ProjectIndexPage> {
               subtitleBuilder: (session) =>
                   'Durée: ${_formatDuration(session.duration)} | GPS Points: ${session.gpsPoints}',
               onTapBuilder: (session) async {
-                final bool? hasChanged = await Navigator.push<bool>(
-                  context,
+                if (!mounted) return;
+
+                // Capture context before async operation
+                final navigator = Navigator.of(context);
+                final sessionBloc = context.read<SessionBloc>();
+
+                final bool? hasChanged = await navigator.push<bool>(
                   MaterialPageRoute(
                     builder: (context) => SessionIndexPage(
                       session: session,
@@ -235,9 +247,7 @@ class _ProjectIndexPageState extends State<ProjectIndexPage> {
                   ),
                 );
                 if (hasChanged == true && mounted) {
-                  context.read<SessionBloc>().add(
-                    LoadSessionsForProjectEvent(projectId),
-                  );
+                  sessionBloc.add(LoadSessionsForProjectEvent(projectId));
                 }
               },
             ),

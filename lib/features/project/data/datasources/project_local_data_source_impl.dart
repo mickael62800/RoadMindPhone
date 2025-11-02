@@ -53,7 +53,26 @@ class ProjectLocalDataSourceImpl implements ProjectLocalDataSource {
         throw DatabaseException('Project not found with id: $id');
       }
 
-      return ProjectModel.fromMap(result.first);
+      // Get all sessions for this project
+      final sessions = await db.query(
+        'sessions',
+        where: 'projectId = ?',
+        whereArgs: [id],
+      );
+
+      // Calculate total duration from sessions
+      int totalDurationInSeconds = 0;
+      for (final session in sessions) {
+        final duration = session['duration'] as int? ?? 0;
+        totalDurationInSeconds += duration;
+      }
+
+      // Create project model with calculated values
+      final projectMap = Map<String, dynamic>.from(result.first);
+      projectMap['session_count'] = sessions.length;
+      projectMap['duration'] = totalDurationInSeconds;
+
+      return ProjectModel.fromMap(projectMap);
     } catch (e) {
       if (e is DatabaseException) rethrow;
       throw DatabaseException('Failed to get project: ${e.toString()}');
@@ -66,7 +85,34 @@ class ProjectLocalDataSourceImpl implements ProjectLocalDataSource {
       final db = await databaseHelper.database;
       final result = await db.query(_tableName, orderBy: 'created_at DESC');
 
-      return result.map((map) => ProjectModel.fromMap(map)).toList();
+      // Calculate session_count and duration dynamically for each project
+      final projects = <ProjectModel>[];
+      for (final map in result) {
+        final projectId = map['id'] as int;
+
+        // Get all sessions for this project
+        final sessions = await db.query(
+          'sessions',
+          where: 'projectId = ?',
+          whereArgs: [projectId],
+        );
+
+        // Calculate total duration from sessions
+        int totalDurationInSeconds = 0;
+        for (final session in sessions) {
+          final duration = session['duration'] as int? ?? 0;
+          totalDurationInSeconds += duration;
+        }
+
+        // Create project model with calculated values
+        final projectMap = Map<String, dynamic>.from(map);
+        projectMap['session_count'] = sessions.length;
+        projectMap['duration'] = totalDurationInSeconds;
+
+        projects.add(ProjectModel.fromMap(projectMap));
+      }
+
+      return projects;
     } catch (e) {
       throw DatabaseException('Failed to get all projects: ${e.toString()}');
     }

@@ -138,6 +138,7 @@ class SessionModel extends SessionEntity {
   }
 
   /// Creates a copy of this model with updated fields
+  @override
   SessionModel copyWith({
     int? id,
     int? projectId,
