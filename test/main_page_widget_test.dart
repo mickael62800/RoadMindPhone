@@ -24,7 +24,9 @@ void main() {
       await tester.pumpWidget(
         ChangeNotifierProvider<ProjectStore>.value(
           value: mockStore,
-          child: const MyApp(),
+          child: const MaterialApp(
+            home: MyHomePage(title: 'Test App'),
+          ),
         ),
       );
       await tester.pump();
