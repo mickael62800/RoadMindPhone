@@ -52,3 +52,19 @@ class CacheException extends AppException {
   @override
   String toString() => 'CacheException: $message';
 }
+
+/// Exception thrown when validation fails
+class ValidationException extends AppException {
+  const ValidationException(super.message);
+
+  @override
+  String toString() => 'ValidationException: $message';
+}
+
+/// Exception thrown when a requested resource is not found
+class NotFoundException extends AppException {
+  const NotFoundException(super.message);
+
+  @override
+  String toString() => 'NotFoundException: $message';
+}

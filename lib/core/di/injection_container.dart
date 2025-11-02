@@ -11,6 +11,19 @@ import 'package:roadmindphone/features/project/domain/usecases/get_project.dart'
 import 'package:roadmindphone/features/project/domain/usecases/search_projects.dart';
 import 'package:roadmindphone/features/project/domain/usecases/update_project.dart';
 import 'package:roadmindphone/features/project/presentation/bloc/project_bloc.dart';
+import 'package:roadmindphone/features/session/data/datasources/session_local_data_source.dart';
+import 'package:roadmindphone/features/session/data/datasources/session_local_data_source_impl.dart';
+import 'package:roadmindphone/features/session/data/repositories/session_repository_impl.dart';
+import 'package:roadmindphone/features/session/domain/repositories/session_repository.dart';
+import 'package:roadmindphone/features/session/domain/usecases/create_session.dart';
+import 'package:roadmindphone/features/session/domain/usecases/delete_session.dart';
+import 'package:roadmindphone/features/session/domain/usecases/get_all_sessions.dart';
+import 'package:roadmindphone/features/session/domain/usecases/get_session.dart';
+import 'package:roadmindphone/features/session/domain/usecases/get_session_count_for_project.dart';
+import 'package:roadmindphone/features/session/domain/usecases/get_sessions_for_project.dart';
+import 'package:roadmindphone/features/session/domain/usecases/session_exists.dart';
+import 'package:roadmindphone/features/session/domain/usecases/update_session.dart';
+import 'package:roadmindphone/features/session/presentation/bloc/session_bloc.dart';
 
 /// Service locator instance
 ///
@@ -69,6 +82,44 @@ Future<void> initializeDependencies() async {
       updateProject: sl(),
       deleteProject: sl(),
       searchProjects: sl(),
+    ),
+  );
+
+  // ============================================
+  // Features - Session
+  // ============================================
+
+  // Data Sources
+  sl.registerLazySingleton<SessionLocalDataSource>(
+    () => SessionLocalDataSourceImpl(databaseHelper: sl()),
+  );
+
+  // Repositories
+  sl.registerLazySingleton<SessionRepository>(
+    () => SessionRepositoryImpl(localDataSource: sl()),
+  );
+
+  // Use Cases
+  sl.registerLazySingleton(() => GetSession(sl()));
+  sl.registerLazySingleton(() => GetSessionsForProject(sl()));
+  sl.registerLazySingleton(() => GetAllSessions(sl()));
+  sl.registerLazySingleton(() => CreateSession(sl()));
+  sl.registerLazySingleton(() => UpdateSession(sl()));
+  sl.registerLazySingleton(() => DeleteSession(sl()));
+  sl.registerLazySingleton(() => GetSessionCountForProject(sl()));
+  sl.registerLazySingleton(() => SessionExists(sl()));
+
+  // BLoC - Factory (new instance each time)
+  sl.registerFactory(
+    () => SessionBloc(
+      getSession: sl(),
+      getSessionsForProject: sl(),
+      getAllSessions: sl(),
+      createSession: sl(),
+      updateSession: sl(),
+      deleteSession: sl(),
+      getSessionCountForProject: sl(),
+      sessionExists: sl(),
     ),
   );
 }
