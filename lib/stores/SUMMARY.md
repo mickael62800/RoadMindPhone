@@ -3,6 +3,7 @@
 ## ✅ Fichiers créés
 
 ### 1. **lib/stores/project_store.dart** (121 lignes)
+
 - Classe `ProjectStore extends ChangeNotifier`
 - Gestion complète de l'état des projets
 - Méthodes: loadProjects, createProject, updateProject, deleteProject, refreshProject
@@ -10,17 +11,20 @@
 - Gestion des erreurs intégrée
 
 ### 2. **test/stores/project_store_test.dart** (236 lignes)
+
 - 19 tests unitaires complets
 - Coverage: 100% du ProjectStore
 - Tous les tests passent ✅
 
 ### 3. **lib/stores/README.md**
+
 - Documentation complète
 - Exemples d'utilisation
 - Description de l'API
 - Guide de démarrage
 
 ### 4. **lib/stores/project_store_example.dart** (338 lignes)
+
 - Exemple complet d'interface utilisateur
 - Intégration avec Provider
 - Opérations CRUD complètes
@@ -36,6 +40,7 @@ flutter test test/stores/project_store_test.dart
 ## 🎯 Fonctionnalités
 
 ### État géré
+
 - ✅ Liste des projets
 - ✅ État de chargement
 - ✅ Messages d'erreur
@@ -43,6 +48,7 @@ flutter test test/stores/project_store_test.dart
 - ✅ Vérification d'existence
 
 ### Opérations
+
 - ✅ Charger tous les projets
 - ✅ Créer un projet
 - ✅ Mettre à jour un projet
@@ -52,6 +58,7 @@ flutter test test/stores/project_store_test.dart
 - ✅ Effacer les erreurs
 
 ### Notifications
+
 - ✅ Notifie automatiquement les listeners
 - ✅ Optimisé avec ChangeNotifier
 - ✅ Liste immutable pour éviter les modifications externes
@@ -62,12 +69,13 @@ Pour utiliser l'exemple complet, ajoutez à `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  provider: ^6.1.1  # Gestion d'état
+  provider: ^6.1.1 # Gestion d'état
 ```
 
 ## 🚀 Utilisation rapide
 
 ### 1. Sans Provider (simple)
+
 ```dart
 final store = ProjectStore();
 await store.loadProjects();
@@ -75,6 +83,7 @@ print('${store.projectCount} projets');
 ```
 
 ### 2. Avec Provider (recommandé)
+
 ```dart
 // main.dart
 runApp(

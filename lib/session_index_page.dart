@@ -3,14 +3,18 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
 import 'package:roadmindphone/database_helper.dart';
-import 'package:roadmindphone/session.dart'; // Import Session class
+import 'package:roadmindphone/session.dart';
 import 'package:roadmindphone/session_completion_page.dart';
+import 'package:roadmindphone/stores/session_store.dart';
+
+import 'package:roadmindphone/src/ui/molecules/molecules.dart';
+import 'package:roadmindphone/src/ui/widgets/session_detail/session_detail_widgets.dart';
 
 typedef FlutterMapBuilder =
     Widget Function({
@@ -52,7 +56,8 @@ class _SessionIndexPageState extends State<SessionIndexPage> {
   double _totalDistance = 0.0;
   double _averageSpeed = 0.0;
   VideoPlayerController? _videoController;
-  late Future<void> _initializeVideoPlayerFuture;
+  Future<void>? _initializeVideoPlayerFuture;
+  bool _hasChanged = false;
 
   @override
   void initState() {
@@ -62,13 +67,33 @@ class _SessionIndexPageState extends State<SessionIndexPage> {
   }
 
   Future<void> _refreshSession() async {
-    final updatedSession = await DatabaseHelper.instance.readSession(
-      _session.id!,
-    ); // Use _session.id! here
-    setState(() {
-      _session = updatedSession; // Update _session
-      _calculateSessionData(); // Call after _session is updated
-    });
+    // Refresh via SessionStore (which will read from database)
+    if (mounted) {
+      try {
+        await context.read<SessionStore>().refreshSession(
+          projectId: _session.projectId,
+          sessionId: _session.id!,
+        );
+        // Get the updated session from the store
+        final updatedSession = await DatabaseHelper.instance.readSession(
+          _session.id!,
+        );
+        setState(() {
+          _session = updatedSession;
+          _calculateSessionData();
+        });
+      } catch (e) {
+        // Fallback: if SessionStore is not available, read directly from database
+        final updatedSession = await DatabaseHelper.instance.readSession(
+          _session.id!,
+        );
+        setState(() {
+          _session = updatedSession;
+          _calculateSessionData();
+        });
+      }
+    }
+
     _determinePosition();
     if (_session.videoPath != null && File(_session.videoPath!).existsSync()) {
       _videoController = VideoPlayerController.file(File(_session.videoPath!));
@@ -151,417 +176,245 @@ class _SessionIndexPageState extends State<SessionIndexPage> {
     }
   }
 
-  String _formatDuration(Duration duration) {
-    String twoDigits(int n) => n.toString().padLeft(2, '0');
-    String twoDigitMinutes = twoDigits(duration.inMinutes.remainder(60));
-    String twoDigitSeconds = twoDigits(duration.inSeconds.remainder(60));
-    return "${twoDigits(duration.inHours)}:$twoDigitMinutes:$twoDigitSeconds";
-  }
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(_session.name),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        actions: <Widget>[
-          PopupMenuButton<String>(
-            onSelected: (value) {
-              if (value == 'Editer') {
-                _showRenameDialog();
-              } else if (value == 'Supprimer') {
-                _showDeleteConfirmationDialog();
-              } else if (value == 'Refaire') {
-                _showRedoConfirmationDialog();
-              } else if (value == 'Exporter') {
-                _exportSessionData();
-              } else {
-                debugPrint('Value: $value');
-              }
-            },
-            itemBuilder: (BuildContext context) {
-              return {'Editer', 'Supprimer', 'Refaire', 'Exporter'}.map((
-                String choice,
-              ) {
-                return PopupMenuItem<String>(
-                  value: choice,
-                  child: Text(choice),
-                );
-              }).toList();
-            },
-          ),
-        ],
-      ),
-      body: OrientationBuilder(
-        builder: (context, orientation) {
-          final isLandscape = orientation == Orientation.landscape;
-          final children = [
-            _buildInfoCard('Points GPS', _session.gpsPoints.toString()),
-            _buildInfoCard('Durée', _formatDuration(_session.duration)),
-            _buildInfoCard(
-              'Vitesse Moyenne',
-              '${_averageSpeed.toStringAsFixed(2)} km/h',
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (bool didPop, dynamic result) {
+        if (!didPop) {
+          Navigator.of(context).pop(_hasChanged);
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(_session.name),
+          backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+          actions: <Widget>[
+            PopupMenuButton<String>(
+              onSelected: (value) {
+                if (value == 'Editer') {
+                  _showRenameDialog();
+                } else if (value == 'Supprimer') {
+                  _showDeleteConfirmationDialog();
+                } else if (value == 'Refaire') {
+                  _showRedoConfirmationDialog();
+                } else if (value == 'Exporter') {
+                  _exportSessionData();
+                } else {
+                  debugPrint('Value: $value');
+                }
+              },
+              itemBuilder: (BuildContext context) {
+                return {'Editer', 'Supprimer', 'Refaire', 'Exporter'}.map((
+                  String choice,
+                ) {
+                  return PopupMenuItem<String>(
+                    value: choice,
+                    child: Text(choice),
+                  );
+                }).toList();
+              },
             ),
-            _buildInfoCard(
-              'Distance',
-              '${_totalDistance.toStringAsFixed(2)} km',
-            ),
-          ];
+          ],
+        ),
+        body: OrientationBuilder(
+          builder: (context, orientation) {
+            final isLandscape = orientation == Orientation.landscape;
+            final statsWidget = SessionStatsWidget(
+              session: _session,
+              averageSpeed: _averageSpeed,
+              totalDistance: _totalDistance,
+            );
 
-          final mapWidget = Expanded(
-            child: Container(
-              margin: const EdgeInsets.all(8.0),
-              decoration: BoxDecoration(
-                border: Border.all(
-                  color: Colors.grey.withAlpha((255 * 0.5).round()),
-                  width: 1.0,
-                ),
-                borderRadius: BorderRadius.circular(8.0),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(6.0),
-                child: _session.gpsData.isNotEmpty
-                    ? widget.flutterMapBuilder(
-                        options: MapOptions(
-                          initialCenter: LatLng(
-                            _session.gpsData.first.latitude,
-                            _session.gpsData.first.longitude,
-                          ),
-                          initialZoom: 13.0,
-                        ),
-                        children: [
-                          TileLayer(
-                            urlTemplate:
-                                'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-                            subdomains: const ['a', 'b', 'c'],
-                          ),
-                          PolylineLayer(
-                            polylines: [
-                              Polyline(
-                                points: _session.gpsData
-                                    .map((p) => LatLng(p.latitude, p.longitude))
-                                    .toList(),
-                                strokeWidth: 4.0,
-                                color: Colors.blue,
-                              ),
-                            ],
-                          ),
-                        ],
-                      )
-                    : const Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.map, size: 80.0, color: Colors.grey),
-                            SizedBox(height: 16.0),
-                            Text('En attente de données'),
-                          ],
-                        ),
+            final mapWidget = SessionMapWidget(
+              session: _session,
+              mapBuilder: widget.flutterMapBuilder,
+              isLandscape: isLandscape,
+            );
+
+            final videoWidget = SessionVideoPlayerWidget(
+              videoController: _videoController,
+              initializeVideoPlayerFuture: _initializeVideoPlayerFuture,
+              isLandscape: isLandscape,
+            );
+
+            if (isLandscape) {
+              return Column(
+                children: [
+                  SizedBox(
+                    height: 120,
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8.0,
+                        vertical: 8.0,
                       ),
-              ),
-            ),
-          );
-
-          final videoWidget = Expanded(
-            child: Container(
-              margin: const EdgeInsets.all(8.0),
-              decoration: BoxDecoration(
-                border: Border.all(
-                  color: Colors.grey.withAlpha((255 * 0.5).round()),
-                  width: 1.0,
-                ),
-                borderRadius: BorderRadius.circular(8.0),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(6.0),
-                child: _videoController != null
-                    ? FutureBuilder(
-                        future: _initializeVideoPlayerFuture,
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState ==
-                              ConnectionState.done) {
-                            return Stack(
-                              alignment: Alignment.center,
-                              children: [
-                                AspectRatio(
-                                  aspectRatio:
-                                      _videoController!.value.aspectRatio,
-                                  child: VideoPlayer(_videoController!),
-                                ),
-                                IconButton(
-                                  icon: Icon(
-                                    _videoController!.value.isPlaying
-                                        ? Icons.pause
-                                        : Icons.play_arrow,
-                                    color: Colors.white,
-                                    size: 50.0,
-                                  ),
-                                  onPressed: () {
-                                    setState(() {
-                                      _videoController!.value.isPlaying
-                                          ? _videoController!.pause()
-                                          : _videoController!.play();
-                                    });
-                                  },
-                                ),
-                              ],
-                            );
-                          } else if (snapshot.hasError) {
-                            return const Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.error_outline,
-                                    size: 80.0,
-                                    color: Colors.red,
-                                  ),
-                                  SizedBox(height: 16.0),
-                                  Text('Erreur de chargement de la vidéo.'),
-                                ],
-                              ),
-                            );
-                          } else {
-                            return const Center(
-                              child: CircularProgressIndicator(),
-                            );
-                          }
-                        },
-                      )
-                    : const Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.videocam_off,
-                              size: 80.0,
-                              color: Colors.grey,
-                            ),
-                            SizedBox(height: 16.0),
-                            Text('En attente de vidéo'),
-                          ],
-                        ),
-                      ),
-              ),
-            ),
-          );
-
-          if (isLandscape) {
-            return Column(
-              children: [
-                SizedBox(
-                  height: 120,
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8.0,
-                      vertical: 8.0,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      children: children
-                          .map((card) => SizedBox(width: 180, child: card))
-                          .toList(),
+                      child: statsWidget,
                     ),
                   ),
-                ),
-                Expanded(
-                  flex: 4,
-                  child: Row(children: [mapWidget, videoWidget]),
-                ),
-              ],
-            );
-          } else {
-            return Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [children[0], children[1]],
+                  Expanded(
+                    flex: 4,
+                    child: Row(children: [mapWidget, videoWidget]),
                   ),
+                ],
+              );
+            } else {
+              return SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const SizedBox(height: 16.0),
+                    statsWidget,
+                    const SizedBox(height: 16.0),
+                    mapWidget,
+                    const SizedBox(height: 16.0),
+                    videoWidget,
+                    const SizedBox(height: 16.0),
+                  ],
                 ),
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [children[2], children[3]],
-                  ),
-                ),
-                mapWidget,
-                videoWidget,
-              ],
-            );
-          }
-        },
-      ),
-    );
-  }
-
-  Widget _buildInfoCard(String title, String value) {
-    return Card(
-      elevation: 4,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                title,
-                style: Theme.of(context).textTheme.titleMedium,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                value,
-                style: Theme.of(context).textTheme.headlineSmall,
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
+              );
+            }
+          },
         ),
       ),
     );
   }
 
-  void _showDeleteConfirmationDialog() {
-    showDialog(
+  void _showDeleteConfirmationDialog() async {
+    final confirmed = await showConfirmationDialog(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Supprimer la session'),
-          content: const Text(
-            'Êtes-vous sûr de vouloir supprimer cette session ?',
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('ANNULER'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-            TextButton(
-              child: const Text('SUPPRIMER'),
-              onPressed: () async {
-                await DatabaseHelper.instance.deleteSession(_session.id!);
-                if (!context.mounted) return;
-                Navigator.of(context).pop(); // Close the dialog
-                Navigator.of(context).pop(); // Go back to the previous screen
-              },
-            ),
-          ],
-        );
-      },
+      title: 'Supprimer la session',
+      content: 'Êtes-vous sûr de vouloir supprimer cette session ?',
+      confirmText: 'SUPPRIMER',
     );
+
+    if (confirmed == true) {
+      if (!mounted) return;
+      final navigator = Navigator.of(context);
+
+      // Delete via SessionStore (with fallback for tests without Provider)
+      try {
+        final sessionStore = context.read<SessionStore>();
+        await sessionStore.deleteSession(
+          projectId: _session.projectId,
+          sessionId: _session.id!,
+        );
+      } catch (e) {
+        // Fallback for tests without Provider
+        await DatabaseHelper.instance.deleteSession(_session.id!);
+      }
+      if (!mounted) return;
+      navigator.pop(true); // Go back and indicate change
+    }
   }
 
   void _showRenameDialog() async {
-    final TextEditingController controller = TextEditingController(
-      text: _session.name,
-    );
-
-    final newName = await showDialog<String>(
+    final newName = await showRenameDialog(
       context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          title: const Text('Renommer la session'),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            decoration: const InputDecoration(
-              hintText: "Nouveau nom de la session",
-            ),
-            onSubmitted: (value) {
-              Navigator.of(dialogContext).pop(value);
-            },
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('ANNULER'),
-              onPressed: () {
-                Navigator.of(dialogContext).pop();
-              },
-            ),
-            TextButton(
-              child: const Text('RENOMMER'),
-              onPressed: () {
-                Navigator.of(dialogContext).pop(controller.text);
-              },
-            ),
-          ],
-        );
-      },
+      title: 'Renommer la session',
+      hintText: 'Nouveau nom de la session',
+      initialValue: _session.name,
     );
 
     if (newName != null && newName.isNotEmpty) {
+      if (!mounted) return;
+
       final updatedSession = _session.copy(name: newName);
-      await DatabaseHelper.instance.updateSession(updatedSession);
+      // Update via SessionStore (with fallback for tests without Provider)
+      try {
+        final sessionStore = context.read<SessionStore>();
+        await sessionStore.updateSession(updatedSession);
+      } catch (e) {
+        // Fallback for tests without Provider
+        await DatabaseHelper.instance.updateSession(updatedSession);
+      }
       if (!mounted) return;
       setState(() {
         _session = updatedSession;
+        _hasChanged = true;
       });
     }
   }
 
-  void _showRedoConfirmationDialog() {
-    showDialog(
+  void _showRedoConfirmationDialog() async {
+    final confirmed = await showConfirmationDialog(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Refaire la session'),
-          content: const Text(
-            'Êtes-vous sûr de vouloir refaire cette session ? La vidéo et les données GPS seront supprimées.',
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('ANNULER'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-            TextButton(
-              child: const Text('CONFIRMER'),
-              onPressed: () async {
-                // Delete video file if exists
-                if (_session.videoPath != null &&
-                    File(_session.videoPath!).existsSync()) {
-                  await File(_session.videoPath!).delete();
-                }
-
-                // Clear GPS data and video path in the session
-                final updatedSession = _session.copy(
-                  gpsData: [],
-                  videoPath: null,
-                  duration: Duration.zero,
-                  gpsPoints: 0,
-                );
-                await DatabaseHelper.instance.updateSession(updatedSession);
-
-                if (!context.mounted) return;
-                setState(() {
-                  _session = updatedSession;
-                  _videoController?.dispose();
-                  _videoController = null;
-                });
-                _calculateSessionData(); // Recalculate stats
-                Navigator.of(context).pop(); // Close the dialog
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) =>
-                        SessionCompletionPage(session: updatedSession),
-                  ),
-                );
-                if (!context.mounted) return;
-                _refreshSession(); // Refresh session data after returning from completion page
-              },
-            ),
-          ],
-        );
-      },
+      title: 'Refaire la session',
+      content:
+          'Êtes-vous sûr de vouloir refaire cette session ? La vidéo et les données GPS seront supprimées.',
+      confirmText: 'CONFIRMER',
     );
+
+    if (confirmed == true) {
+      if (!mounted) return;
+      final navigator = Navigator.of(context);
+
+      // Capture SessionStore before any async operations (or use fallback)
+      SessionStore? sessionStore;
+      try {
+        sessionStore = context.read<SessionStore>();
+      } catch (e) {
+        // No Provider available (tests), will use DatabaseHelper fallback
+        sessionStore = null;
+      }
+
+      // Delete video file if exists
+      if (_session.videoPath != null &&
+          File(_session.videoPath!).existsSync()) {
+        await File(_session.videoPath!).delete();
+      }
+
+      // Clear GPS data and video path in the session
+      final updatedSession = _session.copy(
+        gpsData: [],
+        videoPath: null,
+        duration: Duration.zero,
+        gpsPoints: 0,
+      );
+
+      // Update via SessionStore or DatabaseHelper fallback
+      if (sessionStore != null) {
+        await sessionStore.updateSession(updatedSession);
+      } else {
+        await DatabaseHelper.instance.updateSession(updatedSession);
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _session = updatedSession;
+        _videoController?.dispose();
+        _videoController = null;
+        _hasChanged = true;
+      });
+      _calculateSessionData(); // Recalculate stats
+
+      // Navigate to SessionCompletionPage to redo the session
+      final Session? newSessionData = await navigator.push<Session>(
+        MaterialPageRoute(
+          builder: (context) => SessionCompletionPage(
+            session: updatedSession,
+            flutterMapBuilder: widget.flutterMapBuilder,
+          ),
+        ),
+      );
+      if (newSessionData != null && mounted) {
+        setState(() {
+          _session = newSessionData;
+          _calculateSessionData();
+          if (_session.videoPath != null &&
+              File(_session.videoPath!).existsSync()) {
+            _videoController = VideoPlayerController.file(
+              File(_session.videoPath!),
+            );
+            _initializeVideoPlayerFuture = _videoController!.initialize();
+          } else {
+            _videoController?.dispose();
+            _videoController = null;
+          }
+        });
+      }
+    }
   }
 
   Future<void> _exportSessionData() async {

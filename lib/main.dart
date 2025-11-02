@@ -1,18 +1,30 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:roadmindphone/database_helper.dart';
+import 'package:provider/provider.dart';
 import 'package:roadmindphone/settings_page.dart';
+import 'package:roadmindphone/stores/project_store.dart';
+import 'package:roadmindphone/stores/session_store.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:roadmindphone/session.dart'; // Import Session class
 import 'package:roadmindphone/project_index_page.dart';
+
+import 'package:roadmindphone/src/ui/organisms/organisms.dart';
 
 Future<void> main() async {
   if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
   }
-  runApp(const MyApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ProjectStore()),
+        ChangeNotifierProvider(create: (_) => SessionStore()),
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -22,7 +34,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      showSemanticsDebugger: true, // Add this line
+      showSemanticsDebugger: false,
       title: 'Flutter Demo',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
@@ -53,57 +65,43 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  late Future<List<Project>> _projects;
-
   @override
   void initState() {
     super.initState();
-    _refreshProjects();
-  }
-
-  Future<void> _refreshProjects() async {
-    setState(() {
-      _projects = DatabaseHelper.instance.readAllProjects();
+    // Charger les projets au démarrage
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ProjectStore>().loadProjects().catchError((_) {
+        // L'état d'erreur est déjà géré par le store et l'UI.
+      });
     });
   }
 
   Future<void> _addProject(String title) async {
-    final project = Project(title: title);
-    await DatabaseHelper.instance.create(project);
-    _refreshProjects();
+    try {
+      await context.read<ProjectStore>().createProject(title);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Projet créé avec succès')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Erreur: $e')));
+      }
+    }
   }
 
   void _showAddProjectDialog() async {
-    final TextEditingController controller = TextEditingController();
-    await showDialog(
+    final String? title = await showAddItemDialog(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Nouveau Projet'),
-          content: TextField(
-            controller: controller,
-            decoration: const InputDecoration(hintText: "Titre du projet"),
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('ANNULER'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-            TextButton(
-              child: const Text('AJOUTER'),
-              onPressed: () {
-                if (controller.text.isNotEmpty) {
-                  _addProject(controller.text);
-                }
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
-        );
-      },
+      title: 'Nouveau Projet',
+      hintText: 'Titre du projet',
     );
+    if (title != null) {
+      _addProject(title);
+    }
   }
 
   String _formatDuration(Duration duration) {
@@ -131,59 +129,36 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
         ],
       ),
-      body: FutureBuilder<List<Project>>(
-        future: _projects,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  Icon(Icons.folder_open, size: 80.0),
-                  SizedBox(height: 16.0),
-                  Text('Aucun projet pour le moment.'),
-                ],
-              ),
-            );
-          }
-          else {
-            final projects = snapshot.data!;
-            return OrientationBuilder(
-              builder: (context, orientation) {
-                return GridView.builder(
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: orientation == Orientation.portrait ? 1 : 3,
-                    childAspectRatio: orientation == Orientation.portrait ? 4 : 2,
+      body: Consumer<ProjectStore>(
+        builder: (context, store, child) {
+          return StatefulWrapper(
+            isLoading: store.isLoading,
+            error: store.error,
+            isEmpty: !store.hasProjects,
+            onRetry: () {
+              store.clearError();
+              store.loadProjects();
+            },
+            emptyMessage: 'Aucun projet pour le moment.',
+            child: ItemsListView<Project>(
+              items: store.projects,
+              titleBuilder: (project) => project.title,
+              subtitleBuilder: (project) =>
+                  'Sessions: ${project.sessionCount} | Durée: ${_formatDuration(project.duration)}',
+              onTapBuilder: (project) async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ProjectIndexPage(project: project),
                   ),
-                  itemCount: projects.length,
-                  itemBuilder: (context, index) {
-                    final project = projects[index];
-                    return Card(
-                      margin: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
-                      elevation: 4.0,
-                      child: ListTile(
-                        title: Text(project.title),
-                        subtitle: Text('Sessions: ${project.sessionCount} | Durée: ${_formatDuration(project.duration)}'),
-                        onTap: () async {
-                          await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ProjectIndexPage(project: project),
-                            ),
-                          );
-                          _refreshProjects();
-                        },
-                      ),
-                    );
-                  },
                 );
+                // Rafraîchir les projets après retour
+                if (context.mounted) {
+                  context.read<ProjectStore>().loadProjects();
+                }
               },
-            );
-          }
+            ),
+          );
         },
       ),
       floatingActionButton: FloatingActionButton(
@@ -219,25 +194,24 @@ class Project {
     int? sessionCount,
     Duration? duration,
     List<Session>? sessions,
-  }) =>
-      Project(
-        id: id ?? this.id,
-        title: title ?? this.title,
-        description: description ?? this.description,
-        sessionCount: sessionCount ?? this.sessionCount,
-        duration: duration ?? this.duration,
-        sessions: sessions ?? this.sessions,
-      );
+  }) => Project(
+    id: id ?? this.id,
+    title: title ?? this.title,
+    description: description ?? this.description,
+    sessionCount: sessionCount ?? this.sessionCount,
+    duration: duration ?? this.duration,
+    sessions: sessions ?? this.sessions,
+  );
 
   static Project fromMap(Map<String, dynamic> map) => Project(
-        id: map['id'] as int?,
-        title: map['title'] as String,
-        description: map['description'] as String?,
-      );
+    id: map['id'] as int?,
+    title: map['title'] as String,
+    description: map['description'] as String?,
+  );
 
   Map<String, dynamic> toMap() => {
-        'id': id,
-        'title': title,
-        'description': description,
-      };
+    'id': id,
+    'title': title,
+    'description': description,
+  };
 }

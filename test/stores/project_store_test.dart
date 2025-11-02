@@ -244,5 +244,13 @@ void main() {
         throwsA(isA<UnsupportedError>()),
       );
     });
+
+    test('uses default DatabaseHelper.instance when not provided', () {
+      final store = ProjectStore();
+      // Should not crash and should be initialized
+      expect(store.projects, isEmpty);
+      expect(store.isLoading, false);
+      expect(store.error, isNull);
+    });
   });
 }

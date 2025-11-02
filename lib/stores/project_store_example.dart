@@ -264,7 +264,7 @@ class _ProjectStoreExampleState extends State<ProjectStoreExample> {
               // En-tête avec compteur
               Container(
                 padding: const EdgeInsets.all(16),
-                color: Theme.of(context).primaryColor.withOpacity(0.1),
+                color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
                 child: Row(
                   children: [
                     Text(

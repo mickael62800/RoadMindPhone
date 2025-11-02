@@ -1,10 +1,11 @@
+import 'package:camera/camera.dart';
+import 'package:camera_platform_interface/camera_platform_interface.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:mockito/mockito.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:camera_platform_interface/camera_platform_interface.dart';
 
 import 'package:roadmindphone/database_helper.dart';
 import 'package:roadmindphone/session_completion_page.dart';
@@ -371,8 +372,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Verify camera preview - just check for the loading text
-      expect(find.text('Initializing camera...'), findsOneWidget);
+      // Verify camera preview renders when controller initializes
+      expect(find.byType(CameraPreview), findsOneWidget);
     });
 
     testWidgets('displays map widget', (WidgetTester tester) async {
@@ -480,7 +481,7 @@ void main() {
       // Verify all elements present
       expect(find.byType(MockFlutterMap), findsOneWidget);
       expect(find.text('Go!'), findsOneWidget);
-      expect(find.text('Initializing camera...'), findsOneWidget);
+      expect(find.byType(CameraPreview), findsOneWidget);
 
       // Reset size
       await tester.binding.setSurfaceSize(null);

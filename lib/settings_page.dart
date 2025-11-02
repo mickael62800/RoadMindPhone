@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:roadmindphone/src/ui/atoms/atoms.dart';
+import 'package:roadmindphone/src/ui/molecules/molecules.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -62,26 +64,20 @@ class _SettingsPageState extends State<SettingsPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            TextField(
+            SettingsTextField(
               controller: _serverAddressController,
-              decoration: const InputDecoration(
-                labelText: 'Database Server Address',
-                border: OutlineInputBorder(),
-              ),
+              labelText: 'Database Server Address',
             ),
             const SizedBox(height: 16.0),
-            TextField(
+            SettingsTextField(
               controller: _portController,
-              decoration: const InputDecoration(
-                labelText: 'Database Port',
-                border: OutlineInputBorder(),
-              ),
+              labelText: 'Database Port',
               keyboardType: TextInputType.number,
             ),
             const SizedBox(height: 24.0),
-            ElevatedButton(
+            PrimaryButton(
               onPressed: _saveSettings,
-              child: const Text('Sauver'),
+              text: 'Sauver',
             ),
           ],
         ),

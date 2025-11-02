@@ -44,6 +44,12 @@ dependencies:
   cupertino_icons: ^1.0.6
   latlong2: ^0.9.1
   share_plus: ^9.0.0
+  provider: ^6.1.5+1
+
+  # Clean Architecture dependencies
+  dartz: ^0.10.1 # Functional programming (Either, Option)
+  equatable: ^2.0.5 # Value equality for entities
+  get_it: ^7.6.4 # Dependency injection
 
 dev_dependencies:
   integration_test:

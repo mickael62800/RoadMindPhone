@@ -1,16 +1,22 @@
 import 'dart:math';
+import 'package:camera_platform_interface/camera_platform_interface.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:mockito/mockito.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:roadmindphone/database_helper.dart';
 import 'package:roadmindphone/session.dart';
+import 'package:roadmindphone/session_completion_page.dart';
 import 'package:roadmindphone/session_gps_point.dart';
 import 'package:roadmindphone/session_index_page.dart';
-import 'package:roadmindphone/session_completion_page.dart';
 
 import 'package:roadmindphone/main.dart';
 import 'mocks.mocks.dart';
 import 'mocks/mock_flutter_map.dart';
+import 'fake_geolocator_platform.dart';
+import 'fake_camera_platform.dart';
 
 double _calculateDistance(double lat1, double lon1, double lat2, double lon2) {
   const p = 0.017453292519943295; // Math.PI / 180
@@ -31,10 +37,42 @@ void main() {
     late double expectedAverageSpeedWithGps;
     late double expectedTotalDistanceWithoutGps;
     late double expectedAverageSpeedWithoutGps;
+    late FakeGeolocatorPlatform fakeGeolocatorPlatform;
+    late FakeCameraPlatform fakeCameraPlatform;
 
     setUp(() {
       mockDbHelper = MockDatabaseHelper();
       DatabaseHelper.setTestInstance(mockDbHelper);
+
+      fakeGeolocatorPlatform = FakeGeolocatorPlatform();
+      GeolocatorPlatform.instance = fakeGeolocatorPlatform;
+
+      fakeCameraPlatform = FakeCameraPlatform();
+      CameraPlatform.instance = fakeCameraPlatform;
+
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+            const MethodChannel('plugins.flutter.io/path_provider'),
+            (MethodCall methodCall) async {
+              if (methodCall.method == 'getTemporaryDirectory') {
+                return '/tmp';
+              }
+              return null;
+            },
+          );
+
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+            const MethodChannel('flutter.baseflow.com/permissions/methods'),
+            (MethodCall methodCall) async {
+              if (methodCall.method == 'requestPermissions') {
+                return {
+                  Permission.microphone.value: PermissionStatus.granted.index,
+                };
+              }
+              return null;
+            },
+          );
 
       project = Project(id: 1, title: 'Test Project');
 
@@ -122,6 +160,16 @@ void main() {
     tearDown(() {
       // Reset the DatabaseHelper instance after each test
       DatabaseHelper.resetInstance();
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+            const MethodChannel('plugins.flutter.io/path_provider'),
+            null,
+          );
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+            const MethodChannel('flutter.baseflow.com/permissions/methods'),
+            null,
+          );
     });
 
     testWidgets('Displays session details correctly with GPS data', (
@@ -136,8 +184,8 @@ void main() {
                   return MockFlutterMap(
                     key: key,
                     options: options,
-mapController: mapController,
-children: children ?? [],
+                    mapController: mapController,
+                    children: children ?? [],
                   );
                 },
           ),
@@ -172,8 +220,8 @@ children: children ?? [],
                   return MockFlutterMap(
                     key: key,
                     options: options,
-mapController: mapController,
-children: children ?? [],
+                    mapController: mapController,
+                    children: children ?? [],
                   );
                 },
           ),
@@ -211,8 +259,8 @@ children: children ?? [],
                   return MockFlutterMap(
                     key: key,
                     options: options,
-mapController: mapController,
-children: children ?? [],
+                    mapController: mapController,
+                    children: children ?? [],
                   );
                 },
           ),
@@ -221,7 +269,10 @@ children: children ?? [],
       await tester.pumpAndSettle();
 
       // Open the popup menu
-      await tester.tap(find.byType(PopupMenuButton<String>), warnIfMissed: false);
+      await tester.tap(
+        find.byType(PopupMenuButton<String>),
+        warnIfMissed: false,
+      );
       await tester.pumpAndSettle();
 
       // Tap on 'Editer'
@@ -255,8 +306,8 @@ children: children ?? [],
                   return MockFlutterMap(
                     key: key,
                     options: options,
-mapController: mapController,
-children: children ?? [],
+                    mapController: mapController,
+                    children: children ?? [],
                   );
                 },
           ),
@@ -265,7 +316,10 @@ children: children ?? [],
       await tester.pumpAndSettle();
 
       // Open the popup menu
-      await tester.tap(find.byType(PopupMenuButton<String>), warnIfMissed: false);
+      await tester.tap(
+        find.byType(PopupMenuButton<String>),
+        warnIfMissed: false,
+      );
       await tester.pumpAndSettle();
 
       // Tap on 'Supprimer'
@@ -303,8 +357,8 @@ children: children ?? [],
                   return MockFlutterMap(
                     key: key,
                     options: options,
-mapController: mapController,
-children: children ?? [],
+                    mapController: mapController,
+                    children: children ?? [],
                   );
                 },
           ),
@@ -313,7 +367,10 @@ children: children ?? [],
       await tester.pumpAndSettle();
 
       // Open the popup menu
-      await tester.tap(find.byType(PopupMenuButton<String>), warnIfMissed: false);
+      await tester.tap(
+        find.byType(PopupMenuButton<String>),
+        warnIfMissed: false,
+      );
       await tester.pumpAndSettle();
 
       // Tap on 'Refaire'
@@ -323,7 +380,8 @@ children: children ?? [],
       // Confirm redo in the dialog
       expect(find.text('Refaire la session'), findsOneWidget);
       await tester.tap(find.text('CONFIRMER'), warnIfMissed: false);
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
 
       // Verify navigation to SessionCompletionPage
       expect(find.byType(SessionCompletionPage), findsOneWidget);
@@ -339,8 +397,8 @@ children: children ?? [],
                   return MockFlutterMap(
                     key: key,
                     options: options,
-mapController: mapController,
-children: children ?? [],
+                    mapController: mapController,
+                    children: children ?? [],
                   );
                 },
           ),
@@ -349,7 +407,10 @@ children: children ?? [],
       await tester.pumpAndSettle();
 
       // Open the popup menu
-      await tester.tap(find.byType(PopupMenuButton<String>), warnIfMissed: false);
+      await tester.tap(
+        find.byType(PopupMenuButton<String>),
+        warnIfMissed: false,
+      );
       await tester.pumpAndSettle();
 
       // Tap on 'Editer'
@@ -375,8 +436,8 @@ children: children ?? [],
                   return MockFlutterMap(
                     key: key,
                     options: options,
-mapController: mapController,
-children: children ?? [],
+                    mapController: mapController,
+                    children: children ?? [],
                   );
                 },
           ),
@@ -385,7 +446,10 @@ children: children ?? [],
       await tester.pumpAndSettle();
 
       // Open the popup menu
-      await tester.tap(find.byType(PopupMenuButton<String>), warnIfMissed: false);
+      await tester.tap(
+        find.byType(PopupMenuButton<String>),
+        warnIfMissed: false,
+      );
       await tester.pumpAndSettle();
 
       // Tap on 'Supprimer'
@@ -412,8 +476,8 @@ children: children ?? [],
                   return MockFlutterMap(
                     key: key,
                     options: options,
-mapController: mapController,
-children: children ?? [],
+                    mapController: mapController,
+                    children: children ?? [],
                   );
                 },
           ),
@@ -422,7 +486,10 @@ children: children ?? [],
       await tester.pumpAndSettle();
 
       // Open the popup menu
-      await tester.tap(find.byType(PopupMenuButton<String>), warnIfMissed: false);
+      await tester.tap(
+        find.byType(PopupMenuButton<String>),
+        warnIfMissed: false,
+      );
       await tester.pumpAndSettle();
 
       // Tap on 'Refaire'
@@ -453,8 +520,8 @@ children: children ?? [],
                   return MockFlutterMap(
                     key: key,
                     options: options,
-mapController: mapController,
-children: children ?? [],
+                    mapController: mapController,
+                    children: children ?? [],
                   );
                 },
           ),
@@ -463,7 +530,10 @@ children: children ?? [],
       await tester.pumpAndSettle();
 
       // Open the popup menu
-      await tester.tap(find.byType(PopupMenuButton<String>), warnIfMissed: false);
+      await tester.tap(
+        find.byType(PopupMenuButton<String>),
+        warnIfMissed: false,
+      );
       await tester.pumpAndSettle();
 
       // Tap on 'Editer'
@@ -492,8 +562,8 @@ children: children ?? [],
                   return MockFlutterMap(
                     key: key,
                     options: options,
-mapController: mapController,
-children: children ?? [],
+                    mapController: mapController,
+                    children: children ?? [],
                   );
                 },
           ),
@@ -502,7 +572,10 @@ children: children ?? [],
       await tester.pumpAndSettle();
 
       // Open the popup menu
-      await tester.tap(find.byType(PopupMenuButton<String>), warnIfMissed: false);
+      await tester.tap(
+        find.byType(PopupMenuButton<String>),
+        warnIfMissed: false,
+      );
       await tester.pumpAndSettle();
 
       // Tap on 'Editer'
@@ -544,8 +617,8 @@ children: children ?? [],
                   return MockFlutterMap(
                     key: key,
                     options: options,
-mapController: mapController,
-children: children ?? [],
+                    mapController: mapController,
+                    children: children ?? [],
                   );
                 },
           ),
@@ -567,8 +640,8 @@ children: children ?? [],
                   return MockFlutterMap(
                     key: key,
                     options: options,
-mapController: mapController,
-children: children ?? [],
+                    mapController: mapController,
+                    children: children ?? [],
                   );
                 },
           ),
@@ -577,7 +650,10 @@ children: children ?? [],
       await tester.pumpAndSettle();
 
       // Open the popup menu
-      await tester.tap(find.byType(PopupMenuButton<String>), warnIfMissed: false);
+      await tester.tap(
+        find.byType(PopupMenuButton<String>),
+        warnIfMissed: false,
+      );
       await tester.pumpAndSettle();
 
       // Verify 'Exporter' option is present
@@ -608,8 +684,8 @@ children: children ?? [],
                   return MockFlutterMap(
                     key: key,
                     options: options,
-mapController: mapController,
-children: children ?? [],
+                    mapController: mapController,
+                    children: children ?? [],
                   );
                 },
           ),
@@ -654,8 +730,8 @@ children: children ?? [],
                   return MockFlutterMap(
                     key: key,
                     options: options,
-mapController: mapController,
-children: children ?? [],
+                    mapController: mapController,
+                    children: children ?? [],
                   );
                 },
           ),
@@ -681,8 +757,8 @@ children: children ?? [],
                     return MockFlutterMap(
                       key: key,
                       options: options,
-mapController: mapController,
-children: children ?? [],
+                      mapController: mapController,
+                      children: children ?? [],
                     );
                   },
             ),
@@ -710,8 +786,8 @@ children: children ?? [],
                   return MockFlutterMap(
                     key: key,
                     options: options,
-mapController: mapController,
-children: children ?? [],
+                    mapController: mapController,
+                    children: children ?? [],
                   );
                 },
           ),
@@ -738,8 +814,8 @@ children: children ?? [],
                   return MockFlutterMap(
                     key: key,
                     options: options,
-mapController: mapController,
-children: children ?? [],
+                    mapController: mapController,
+                    children: children ?? [],
                   );
                 },
           ),
@@ -793,8 +869,8 @@ children: children ?? [],
                   return MockFlutterMap(
                     key: key,
                     options: options,
-mapController: mapController,
-children: children ?? [],
+                    mapController: mapController,
+                    children: children ?? [],
                   );
                 },
           ),
@@ -848,8 +924,8 @@ children: children ?? [],
                   return MockFlutterMap(
                     key: key,
                     options: options,
-mapController: mapController,
-children: children ?? [],
+                    mapController: mapController,
+                    children: children ?? [],
                   );
                 },
           ),
@@ -873,8 +949,8 @@ children: children ?? [],
                   return MockFlutterMap(
                     key: key,
                     options: options,
-mapController: mapController,
-children: children ?? [],
+                    mapController: mapController,
+                    children: children ?? [],
                   );
                 },
           ),
@@ -898,8 +974,8 @@ children: children ?? [],
                   return MockFlutterMap(
                     key: key,
                     options: options,
-mapController: mapController,
-children: children ?? [],
+                    mapController: mapController,
+                    children: children ?? [],
                   );
                 },
           ),
@@ -970,8 +1046,8 @@ children: children ?? [],
                   return MockFlutterMap(
                     key: key,
                     options: options,
-mapController: mapController,
-children: children ?? [],
+                    mapController: mapController,
+                    children: children ?? [],
                   );
                 },
           ),
@@ -1033,8 +1109,8 @@ children: children ?? [],
                   return MockFlutterMap(
                     key: key,
                     options: options,
-mapController: mapController,
-children: children ?? [],
+                    mapController: mapController,
+                    children: children ?? [],
                   );
                 },
           ),
@@ -1062,8 +1138,8 @@ children: children ?? [],
                   return MockFlutterMap(
                     key: key,
                     options: options,
-mapController: mapController,
-children: children ?? [],
+                    mapController: mapController,
+                    children: children ?? [],
                   );
                 },
           ),
@@ -1102,8 +1178,8 @@ children: children ?? [],
                   return MockFlutterMap(
                     key: key,
                     options: options,
-mapController: mapController,
-children: children ?? [],
+                    mapController: mapController,
+                    children: children ?? [],
                   );
                 },
           ),
@@ -1142,8 +1218,8 @@ children: children ?? [],
                   return MockFlutterMap(
                     key: key,
                     options: options,
-mapController: mapController,
-children: children ?? [],
+                    mapController: mapController,
+                    children: children ?? [],
                   );
                 },
           ),
@@ -1167,8 +1243,8 @@ children: children ?? [],
                   return MockFlutterMap(
                     key: key,
                     options: options,
-mapController: mapController,
-children: children ?? [],
+                    mapController: mapController,
+                    children: children ?? [],
                   );
                 },
           ),
@@ -1177,7 +1253,10 @@ children: children ?? [],
       await tester.pumpAndSettle();
 
       // Open popup menu
-      await tester.tap(find.byType(PopupMenuButton<String>), warnIfMissed: false);
+      await tester.tap(
+        find.byType(PopupMenuButton<String>),
+        warnIfMissed: false,
+      );
       await tester.pumpAndSettle();
 
       // Verify all menu options
@@ -1199,8 +1278,8 @@ children: children ?? [],
                   return MockFlutterMap(
                     key: key,
                     options: options,
-mapController: mapController,
-children: children ?? [],
+                    mapController: mapController,
+                    children: children ?? [],
                   );
                 },
           ),
@@ -1228,8 +1307,8 @@ children: children ?? [],
                   return MockFlutterMap(
                     key: key,
                     options: options,
-mapController: mapController,
-children: children ?? [],
+                    mapController: mapController,
+                    children: children ?? [],
                   );
                 },
           ),
@@ -1253,8 +1332,8 @@ children: children ?? [],
                   return MockFlutterMap(
                     key: key,
                     options: options,
-mapController: mapController,
-children: children ?? [],
+                    mapController: mapController,
+                    children: children ?? [],
                   );
                 },
           ),
@@ -1279,8 +1358,8 @@ children: children ?? [],
                   return MockFlutterMap(
                     key: key,
                     options: options,
-mapController: mapController,
-children: children ?? [],
+                    mapController: mapController,
+                    children: children ?? [],
                   );
                 },
           ),
@@ -1316,8 +1395,8 @@ children: children ?? [],
                   return MockFlutterMap(
                     key: key,
                     options: options,
-mapController: mapController,
-children: children ?? [],
+                    mapController: mapController,
+                    children: children ?? [],
                   );
                 },
           ),
@@ -1329,7 +1408,7 @@ children: children ?? [],
       expect(find.text('00:00:00'), findsOneWidget);
     });
 
-    testWidgets('Expanded widgets in portrait use spaceAround', (
+    testWidgets('Portrait mode uses scrollable layout with Wrap', (
       WidgetTester tester,
     ) async {
       tester.view.physicalSize = const Size(600, 800);
@@ -1345,8 +1424,8 @@ children: children ?? [],
                   return MockFlutterMap(
                     key: key,
                     options: options,
-mapController: mapController,
-children: children ?? [],
+                    mapController: mapController,
+                    children: children ?? [],
                   );
                 },
           ),
@@ -1354,8 +1433,9 @@ children: children ?? [],
       );
       await tester.pumpAndSettle();
 
-      // Verify Expanded widgets exist for map and video
-      expect(find.byType(Expanded), findsWidgets);
+      // Verify SingleChildScrollView and Wrap are used in portrait mode
+      expect(find.byType(SingleChildScrollView), findsOneWidget);
+      expect(find.byType(Wrap), findsOneWidget);
     });
 
     testWidgets('ClipRRect rounds corners correctly', (
@@ -1370,8 +1450,8 @@ children: children ?? [],
                   return MockFlutterMap(
                     key: key,
                     options: options,
-mapController: mapController,
-children: children ?? [],
+                    mapController: mapController,
+                    children: children ?? [],
                   );
                 },
           ),
@@ -1395,8 +1475,8 @@ children: children ?? [],
                   return MockFlutterMap(
                     key: key,
                     options: options,
-mapController: mapController,
-children: children ?? [],
+                    mapController: mapController,
+                    children: children ?? [],
                   );
                 },
           ),
@@ -1420,8 +1500,8 @@ children: children ?? [],
                   return MockFlutterMap(
                     key: key,
                     options: options,
-mapController: mapController,
-children: children ?? [],
+                    mapController: mapController,
+                    children: children ?? [],
                   );
                 },
           ),
@@ -1445,8 +1525,8 @@ children: children ?? [],
                   return MockFlutterMap(
                     key: key,
                     options: options,
-mapController: mapController,
-children: children ?? [],
+                    mapController: mapController,
+                    children: children ?? [],
                   );
                 },
           ),
@@ -1470,8 +1550,8 @@ children: children ?? [],
                   return MockFlutterMap(
                     key: key,
                     options: options,
-mapController: mapController,
-children: children ?? [],
+                    mapController: mapController,
+                    children: children ?? [],
                   );
                 },
           ),
@@ -1495,8 +1575,8 @@ children: children ?? [],
                   return MockFlutterMap(
                     key: key,
                     options: options,
-mapController: mapController,
-children: children ?? [],
+                    mapController: mapController,
+                    children: children ?? [],
                   );
                 },
           ),
@@ -1524,8 +1604,8 @@ children: children ?? [],
                   return MockFlutterMap(
                     key: key,
                     options: options,
-mapController: mapController,
-children: children ?? [],
+                    mapController: mapController,
+                    children: children ?? [],
                   );
                 },
           ),
@@ -1549,8 +1629,8 @@ children: children ?? [],
                   return MockFlutterMap(
                     key: key,
                     options: options,
-mapController: mapController,
-children: children ?? [],
+                    mapController: mapController,
+                    children: children ?? [],
                   );
                 },
           ),
@@ -1574,8 +1654,8 @@ children: children ?? [],
                   return MockFlutterMap(
                     key: key,
                     options: options,
-mapController: mapController,
-children: children ?? [],
+                    mapController: mapController,
+                    children: children ?? [],
                   );
                 },
           ),
@@ -1597,8 +1677,8 @@ children: children ?? [],
                   return MockFlutterMap(
                     key: key,
                     options: options,
-mapController: mapController,
-children: children ?? [],
+                    mapController: mapController,
+                    children: children ?? [],
                   );
                 },
           ),
@@ -1634,8 +1714,8 @@ children: children ?? [],
                   return MockFlutterMap(
                     key: key,
                     options: options,
-mapController: mapController,
-children: children ?? [],
+                    mapController: mapController,
+                    children: children ?? [],
                   );
                 },
           ),

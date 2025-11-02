@@ -8,6 +8,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:roadmindphone/session.dart'; // Corrected import for Session
 import 'package:camera/camera.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:roadmindphone/stores/project_store.dart';
+import 'package:roadmindphone/stores/session_store.dart';
 
 @GenerateMocks([
   Client,
@@ -19,5 +21,7 @@ import 'package:permission_handler/permission_handler.dart';
   CameraController,
   CameraValue,
   Permission,
+  ProjectStore,
+  SessionStore,
 ])
 void main() {}
