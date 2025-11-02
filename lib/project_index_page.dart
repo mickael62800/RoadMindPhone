@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:provider/provider.dart';
+import 'package:roadmindphone/database_helper.dart';
 import 'package:roadmindphone/export_data_page.dart';
 import 'package:roadmindphone/features/project/domain/entities/project_entity.dart';
 import 'package:roadmindphone/features/project/presentation/bloc/project_bloc.dart';
 import 'package:roadmindphone/features/project/presentation/bloc/project_event.dart';
 import 'package:roadmindphone/features/project/presentation/bloc/project_state.dart';
+import 'package:roadmindphone/features/session/presentation/bloc/session_bloc.dart';
+import 'package:roadmindphone/features/session/presentation/bloc/session_event.dart';
+import 'package:roadmindphone/features/session/presentation/bloc/session_state.dart';
 import 'package:roadmindphone/main.dart';
 import 'package:roadmindphone/session.dart';
 import 'package:roadmindphone/session_completion_page.dart';
 import 'package:roadmindphone/session_index_page.dart';
-import 'package:roadmindphone/stores/session_store.dart';
 import 'package:roadmindphone/src/ui/molecules/molecules.dart';
 import 'package:roadmindphone/src/ui/organisms/organisms.dart';
 
@@ -74,12 +76,13 @@ class _ProjectIndexPageState extends State<ProjectIndexPage> {
     _project = widget.project;
     Future.microtask(() {
       if (!mounted) return;
-      context.read<SessionStore>().loadSessions(_project.id!);
+      context.read<SessionBloc>().add(
+        LoadSessionsForProjectEvent(_project.id!),
+      );
     });
   }
 
   void _showAddSessionDialog() async {
-    final sessionStore = context.read<SessionStore>();
     final projectId = _project.id!;
 
     final String? name = await showAddItemDialog(
@@ -90,10 +93,16 @@ class _ProjectIndexPageState extends State<ProjectIndexPage> {
 
     if (name != null) {
       try {
-        final createdSession = await sessionStore.createSession(
-          projectId: projectId,
-          name: name,
+        // Create session via DatabaseHelper for immediate result
+        final createdSession = await DatabaseHelper.instance.createSession(
+          Session(
+            projectId: projectId,
+            name: name,
+            duration: const Duration(),
+            gpsPoints: 0,
+          ),
         );
+
         if (!mounted) return;
         await Navigator.push(
           context,
@@ -104,8 +113,10 @@ class _ProjectIndexPageState extends State<ProjectIndexPage> {
             ),
           ),
         );
+
         if (!mounted) return;
-        sessionStore.loadSessions(projectId);
+        // Reload sessions via SessionBloc
+        context.read<SessionBloc>().add(LoadSessionsForProjectEvent(projectId));
       } catch (e) {
         if (!mounted) return;
         ScaffoldMessenger.of(
@@ -130,14 +141,16 @@ class _ProjectIndexPageState extends State<ProjectIndexPage> {
         title: Text(_project.title),
         actions: <Widget>[
           PopupMenuButton<String>(
-            onSelected: (value) {
+            onSelected: (value) async {
               if (value == 'Editer') {
                 _showRenameDialog();
               } else if (value == 'Supprimer') {
                 _showDeleteConfirmationDialog();
               } else if (value == 'Exporter') {
-                final sessionStore = context.read<SessionStore>();
-                final sessions = sessionStore.sessionsForProject(_project.id!);
+                // Get sessions from DatabaseHelper for export
+                final sessions = await DatabaseHelper.instance
+                    .readAllSessionsForProject(_project.id!);
+                if (!mounted) return;
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -162,24 +175,52 @@ class _ProjectIndexPageState extends State<ProjectIndexPage> {
           ),
         ],
       ),
-      body: Consumer<SessionStore>(
-        builder: (context, sessionStore, child) {
+      body: BlocBuilder<SessionBloc, SessionState>(
+        builder: (context, state) {
           final projectId = _project.id!;
+
+          // Determine loading state
+          final bool isLoading = state is SessionLoading;
+
+          // Determine error state
+          final String? error = state is SessionError ? state.message : null;
+
+          // Get sessions list
+          final List<Session> sessions;
+          if (state is SessionsLoaded) {
+            sessions = state.sessions.map((entity) {
+              // Convert SessionEntity back to Session for UI
+              return Session(
+                id: entity.id,
+                projectId: entity.projectId,
+                name: entity.name,
+                duration: entity.duration,
+                gpsPoints: entity.gpsPoints,
+                videoPath: entity.videoPath,
+                gpsData: entity.gpsData,
+                startTime: entity.startTime,
+                endTime: entity.endTime,
+                notes: entity.notes,
+              );
+            }).toList();
+          } else {
+            sessions = [];
+          }
+
+          final bool isEmpty = sessions.isEmpty && !isLoading;
+
           return StatefulWrapper(
-            isLoading:
-                sessionStore.isLoading(projectId) &&
-                !sessionStore.hasSessions(projectId),
-            error: sessionStore.errorForProject(projectId),
-            isEmpty:
-                sessionStore.sessionsForProject(projectId).isEmpty &&
-                !sessionStore.isLoading(projectId),
+            isLoading: isLoading && sessions.isEmpty,
+            error: error,
+            isEmpty: isEmpty,
             onRetry: () {
-              sessionStore.clearError(projectId);
-              sessionStore.loadSessions(projectId);
+              context.read<SessionBloc>().add(
+                LoadSessionsForProjectEvent(projectId),
+              );
             },
             emptyMessage: 'Aucune session pour le moment.',
             child: ItemsListView<Session>(
-              items: sessionStore.sessionsForProject(projectId),
+              items: sessions,
               titleBuilder: (session) => session.name,
               subtitleBuilder: (session) =>
                   'Durée: ${_formatDuration(session.duration)} | GPS Points: ${session.gpsPoints}',
@@ -194,7 +235,9 @@ class _ProjectIndexPageState extends State<ProjectIndexPage> {
                   ),
                 );
                 if (hasChanged == true && mounted) {
-                  sessionStore.loadSessions(projectId);
+                  context.read<SessionBloc>().add(
+                    LoadSessionsForProjectEvent(projectId),
+                  );
                 }
               },
             ),
