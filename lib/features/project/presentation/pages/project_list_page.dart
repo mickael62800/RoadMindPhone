@@ -5,6 +5,7 @@ import 'package:roadmindphone/features/project/domain/entities/project_entity.da
 import 'package:roadmindphone/features/project/presentation/pages/project_detail_page.dart';
 import 'package:roadmindphone/src/ui/organisms/organisms.dart';
 import 'package:roadmindphone/settings_page.dart';
+import 'package:roadmindphone/database_helper.dart';
 
 /// Main page displaying the list of all projects
 ///
@@ -18,11 +19,53 @@ class ProjectListPage extends StatefulWidget {
 }
 
 class _ProjectListPageState extends State<ProjectListPage> {
+  int _totalGpsPoints = 0;
+  int _totalVideos = 0;
+  Map<int, bool> _projectWarnings = {};
+
   @override
   void initState() {
     super.initState();
     // Load projects when page is first displayed
     context.read<ProjectBloc>().add(const LoadProjectsEvent());
+  }
+
+  /// Load additional statistics (GPS points and videos count)
+  Future<void> _loadAdditionalStats(List<ProjectEntity> projects) async {
+    try {
+      int gpsPoints = 0;
+      int videos = 0;
+      Map<int, bool> warnings = {};
+
+      for (final project in projects) {
+        final sessions = await DatabaseHelper.instance
+            .readAllSessionsForProject(project.id!);
+        bool hasIncomplete = false;
+        for (final session in sessions) {
+          gpsPoints += session.gpsPoints;
+          if (session.videoPath != null && session.videoPath!.isNotEmpty) {
+            videos++;
+          }
+          // Check if session is incomplete (no video or no GPS points)
+          if (session.videoPath == null ||
+              session.videoPath!.isEmpty ||
+              session.gpsPoints == 0) {
+            hasIncomplete = true;
+          }
+        }
+        warnings[project.id!] = hasIncomplete;
+      }
+
+      if (mounted) {
+        setState(() {
+          _totalGpsPoints = gpsPoints;
+          _totalVideos = videos;
+          _projectWarnings = warnings;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading additional stats: $e');
+    }
   }
 
   /// Format duration to HH:MM:SS
@@ -45,6 +88,18 @@ class _ProjectListPageState extends State<ProjectListPage> {
       if (!mounted) return;
       context.read<ProjectBloc>().add(CreateProjectEvent(title: title));
     }
+  }
+
+  /// Build an info row with icon, label and value
+  Widget _buildInfoRow(IconData icon, String label, String value) {
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: Colors.grey),
+        const SizedBox(width: 8),
+        Text('$label: ', style: const TextStyle(fontWeight: FontWeight.bold)),
+        Expanded(child: Text(value, overflow: TextOverflow.ellipsis)),
+      ],
+    );
   }
 
   @override
@@ -144,50 +199,148 @@ class _ProjectListPageState extends State<ProjectListPage> {
           List<ProjectEntity> projects = [];
           if (state is ProjectsLoaded) {
             projects = state.projects;
+            // Load additional stats when projects are loaded
+            _loadAdditionalStats(projects);
           }
 
+          // Calculate statistics
+          final int totalProjects = projects.length;
+          final int totalSessions = projects.fold<int>(
+            0,
+            (sum, project) => sum + project.sessionCount,
+          );
+          final Duration totalDuration = projects.fold<Duration>(
+            Duration.zero,
+            (sum, project) => sum + project.duration,
+          );
           return RefreshIndicator(
             onRefresh: () async {
               context.read<ProjectBloc>().add(const RefreshProjectsEvent());
               // Wait for the refresh to complete
               await Future.delayed(const Duration(milliseconds: 500));
             },
-            child: ItemsListView<ProjectEntity>(
-              items: projects,
-              titleBuilder: (project) => project.title,
-              subtitleBuilder: (project) =>
-                  'Sessions: ${project.sessionCount} | Durée: ${_formatDuration(project.duration)}',
-              onTapBuilder: (project) async {
-                if (!mounted) return;
-
-                // Capture context before async operation
-                final navigator = Navigator.of(context);
-                final projectBloc = context.read<ProjectBloc>();
-
-                // Navigate to project details page
-                await navigator.push<bool>(
-                  MaterialPageRoute(
-                    builder: (context) => BlocProvider.value(
-                      value: projectBloc,
-                      child: ProjectDetailPage(project: project),
+            child: Column(
+              children: [
+                // Statistics Card (same style as project detail page)
+                if (projects.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: Card(
+                        elevation: 4,
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Statistiques globales',
+                                style: Theme.of(context).textTheme.titleLarge,
+                              ),
+                              const SizedBox(height: 16),
+                              _buildInfoRow(
+                                Icons.folder,
+                                'Projets',
+                                totalProjects.toString(),
+                              ),
+                              const SizedBox(height: 8),
+                              _buildInfoRow(
+                                Icons.videocam,
+                                'Sessions',
+                                totalSessions.toString(),
+                              ),
+                              const SizedBox(height: 8),
+                              _buildInfoRow(
+                                Icons.timer,
+                                'Durée totale',
+                                _formatDuration(totalDuration),
+                              ),
+                              const SizedBox(height: 8),
+                              _buildInfoRow(
+                                Icons.location_on,
+                                'Points GPS',
+                                _totalGpsPoints.toString(),
+                              ),
+                              const SizedBox(height: 8),
+                              _buildInfoRow(
+                                Icons.video_library,
+                                'Vidéos',
+                                _totalVideos.toString(),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
                   ),
-                );
+                const SizedBox(height: 16),
+                // Projects section header
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Projets',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      ElevatedButton.icon(
+                        onPressed: _showAddProjectDialog,
+                        icon: const Icon(Icons.add),
+                        label: const Text('Nouveau projet'),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                // Projects List
+                Expanded(
+                  child: ItemsListView<ProjectEntity>(
+                    items: projects,
+                    titleBuilder: (project) => project.title,
+                    subtitleBuilder: (project) =>
+                        'Sessions: ${project.sessionCount} | Durée: ${_formatDuration(project.duration)}',
+                    trailingBuilder: (project) {
+                      // Show warning icon if project has incomplete sessions
+                      if (_projectWarnings[project.id] == true) {
+                        return const Icon(
+                          Icons.warning,
+                          color: Colors.orange,
+                          size: 28,
+                        );
+                      }
+                      return null;
+                    },
+                    onTapBuilder: (project) async {
+                      if (!mounted) return;
 
-                // Always reload projects when returning from detail page
-                // This ensures the list is refreshed with updated session counts and durations
-                if (mounted) {
-                  projectBloc.add(const LoadProjectsEvent());
-                }
-              },
+                      // Capture context before async operation
+                      final navigator = Navigator.of(context);
+                      final projectBloc = context.read<ProjectBloc>();
+
+                      // Navigate to project details page
+                      await navigator.push<bool>(
+                        MaterialPageRoute(
+                          builder: (context) => BlocProvider.value(
+                            value: projectBloc,
+                            child: ProjectDetailPage(project: project),
+                          ),
+                        ),
+                      );
+
+                      // Always reload projects when returning from detail page
+                      // This ensures the list is refreshed with updated session counts and durations
+                      if (mounted) {
+                        projectBloc.add(const LoadProjectsEvent());
+                      }
+                    },
+                  ),
+                ),
+              ],
             ),
           );
         },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showAddProjectDialog,
-        tooltip: 'Ajouter un projet',
-        child: const Icon(Icons.add),
       ),
     );
   }

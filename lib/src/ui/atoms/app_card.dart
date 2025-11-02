@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 
 class AppCard extends StatelessWidget {
@@ -9,10 +8,7 @@ class AppCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: const EdgeInsets.symmetric(
-        vertical: 4.0,
-        horizontal: 8.0,
-      ),
+      margin: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 16.0),
       elevation: 4.0,
       child: child,
     );
