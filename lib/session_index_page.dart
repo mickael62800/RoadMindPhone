@@ -2,19 +2,42 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'dart:io';
 import 'package:http/http.dart' as http;
-import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
 import 'package:roadmindphone/database_helper.dart';
 import 'package:roadmindphone/session.dart';
 import 'package:roadmindphone/session_completion_page.dart';
-import 'package:roadmindphone/stores/session_store.dart';
+import 'package:roadmindphone/features/session/domain/entities/session_entity.dart';
+import 'package:roadmindphone/features/session/presentation/bloc/session_bloc.dart';
+import 'package:roadmindphone/features/session/presentation/bloc/session_event.dart';
+import 'package:roadmindphone/features/session/presentation/bloc/session_state.dart';
 
 import 'package:roadmindphone/src/ui/molecules/molecules.dart';
 import 'package:roadmindphone/src/ui/widgets/session_detail/session_detail_widgets.dart';
+
+/// Extension to convert legacy Session to SessionEntity
+extension SessionToEntity on Session {
+  SessionEntity toEntity() {
+    return SessionEntity(
+      id: id,
+      projectId: projectId,
+      name: name,
+      duration: duration,
+      gpsPoints: gpsPoints,
+      videoPath: videoPath,
+      gpsData: gpsData,
+      startTime: startTime,
+      endTime: endTime,
+      notes: notes,
+      createdAt: DateTime.now(), // Legacy sessions don't have createdAt
+      updatedAt: null,
+    );
+  }
+}
 
 typedef FlutterMapBuilder =
     Widget Function({
@@ -67,14 +90,12 @@ class _SessionIndexPageState extends State<SessionIndexPage> {
   }
 
   Future<void> _refreshSession() async {
-    // Refresh via SessionStore (which will read from database)
-    if (mounted) {
+    // Refresh via SessionBloc
+    if (mounted && _session.id != null) {
+      context.read<SessionBloc>().add(LoadSessionEvent(_session.id!));
+
+      // Also read directly from database for immediate UI update
       try {
-        await context.read<SessionStore>().refreshSession(
-          projectId: _session.projectId,
-          sessionId: _session.id!,
-        );
-        // Get the updated session from the store
         final updatedSession = await DatabaseHelper.instance.readSession(
           _session.id!,
         );
@@ -83,14 +104,7 @@ class _SessionIndexPageState extends State<SessionIndexPage> {
           _calculateSessionData();
         });
       } catch (e) {
-        // Fallback: if SessionStore is not available, read directly from database
-        final updatedSession = await DatabaseHelper.instance.readSession(
-          _session.id!,
-        );
-        setState(() {
-          _session = updatedSession;
-          _calculateSessionData();
-        });
+        // Handle error silently or show a snackbar
       }
     }
 
@@ -292,18 +306,14 @@ class _SessionIndexPageState extends State<SessionIndexPage> {
     if (confirmed == true) {
       if (!mounted) return;
       final navigator = Navigator.of(context);
+      final bloc = context.read<SessionBloc>();
 
-      // Delete via SessionStore (with fallback for tests without Provider)
-      try {
-        final sessionStore = context.read<SessionStore>();
-        await sessionStore.deleteSession(
-          projectId: _session.projectId,
-          sessionId: _session.id!,
-        );
-      } catch (e) {
-        // Fallback for tests without Provider
-        await DatabaseHelper.instance.deleteSession(_session.id!);
-      }
+      // Delete via SessionBloc
+      bloc.add(DeleteSessionEvent(_session.id!));
+
+      // Wait for the result
+      await Future.delayed(const Duration(milliseconds: 100));
+
       if (!mounted) return;
       navigator.pop(true); // Go back and indicate change
     }
@@ -321,14 +331,11 @@ class _SessionIndexPageState extends State<SessionIndexPage> {
       if (!mounted) return;
 
       final updatedSession = _session.copy(name: newName);
-      // Update via SessionStore (with fallback for tests without Provider)
-      try {
-        final sessionStore = context.read<SessionStore>();
-        await sessionStore.updateSession(updatedSession);
-      } catch (e) {
-        // Fallback for tests without Provider
-        await DatabaseHelper.instance.updateSession(updatedSession);
-      }
+      final bloc = context.read<SessionBloc>();
+
+      // Update via SessionBloc
+      bloc.add(UpdateSessionEvent(updatedSession.toEntity()));
+
       if (!mounted) return;
       setState(() {
         _session = updatedSession;
@@ -349,15 +356,7 @@ class _SessionIndexPageState extends State<SessionIndexPage> {
     if (confirmed == true) {
       if (!mounted) return;
       final navigator = Navigator.of(context);
-
-      // Capture SessionStore before any async operations (or use fallback)
-      SessionStore? sessionStore;
-      try {
-        sessionStore = context.read<SessionStore>();
-      } catch (e) {
-        // No Provider available (tests), will use DatabaseHelper fallback
-        sessionStore = null;
-      }
+      final bloc = context.read<SessionBloc>();
 
       // Delete video file if exists
       if (_session.videoPath != null &&
@@ -373,12 +372,8 @@ class _SessionIndexPageState extends State<SessionIndexPage> {
         gpsPoints: 0,
       );
 
-      // Update via SessionStore or DatabaseHelper fallback
-      if (sessionStore != null) {
-        await sessionStore.updateSession(updatedSession);
-      } else {
-        await DatabaseHelper.instance.updateSession(updatedSession);
-      }
+      // Update via SessionBloc
+      bloc.add(UpdateSessionEvent(updatedSession.toEntity()));
 
       if (!mounted) return;
       setState(() {

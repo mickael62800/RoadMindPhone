@@ -2,15 +2,17 @@ import 'dart:async';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:provider/provider.dart';
 import 'package:roadmindphone/database_helper.dart';
 import 'package:roadmindphone/session.dart'; // Import Session class
-
 import 'package:roadmindphone/session_gps_point.dart';
-import 'package:roadmindphone/stores/session_store.dart';
+import 'package:roadmindphone/features/session/domain/entities/session_entity.dart';
+import 'package:roadmindphone/features/session/presentation/bloc/session_bloc.dart';
+import 'package:roadmindphone/features/session/presentation/bloc/session_event.dart';
+import 'package:roadmindphone/session_index_page.dart'; // Import for SessionToEntity extension
 import 'package:permission_handler/permission_handler.dart';
 
 typedef FlutterMapBuilder =
@@ -191,13 +193,18 @@ class _SessionCompletionPageState extends State<SessionCompletionPage> {
       videoPath: videoFile?.path,
     );
 
-    // Update via SessionStore (which will handle the database update)
+    // Update via SessionBloc
     if (mounted) {
       try {
-        await context.read<SessionStore>().updateSession(updatedSession);
+        final bloc = context.read<SessionBloc>();
+        // Convert to entity using the extension from session_index_page
+        final entity = updatedSession.toEntity();
+        bloc.add(UpdateSessionEvent(entity));
+
+        // Also update database directly for immediate consistency
+        await _databaseHelper.updateSession(updatedSession);
       } catch (e) {
-        // Fallback: if SessionStore is not available (e.g., in tests),
-        // update the database directly
+        // Fallback: update the database directly
         await _databaseHelper.updateSession(updatedSession);
       }
     }
