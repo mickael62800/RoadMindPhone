@@ -50,6 +50,7 @@ dependencies:
   dartz: ^0.10.1 # Functional programming (Either, Option)
   equatable: ^2.0.5 # Value equality for entities
   get_it: ^7.6.4 # Dependency injection
+  flutter_bloc: ^8.1.3 # BLoC state management
 
 dev_dependencies:
   integration_test:
