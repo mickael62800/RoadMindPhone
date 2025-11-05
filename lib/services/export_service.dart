@@ -126,28 +126,58 @@ class ExportService {
   ) async {
     final url = Uri.parse('$baseUrl/api/Projects');
     final request = http.MultipartRequest('POST', url);
+    // Générer les IDs temporaires pour chaque session (index + 1)
+    final List<Map<String, dynamic>> sessionsJson = [];
+    final Map<Session, int> sessionToTempId = {};
+    for (int i = 0; i < sessions.length; i++) {
+      final tempId = i + 1;
+      final sessionJson = _sessionToJson(sessions[i]);
+      sessionJson['Id'] = tempId;
+      sessionsJson.add(sessionJson);
+      sessionToTempId[sessions[i]] = tempId;
+    }
     final projectData = {
       'Name': project.title,
       'Description': project.description ?? '',
-      'Sessions': sessions.map((session) => _sessionToJson(session)).toList(),
+      'Sessions': sessionsJson,
     };
     request.fields['ProjectData'] = json.jsonEncode(projectData);
+    int videoCount = 0;
     for (final session in sessions) {
       if (session.videoPath != null &&
           io.File(session.videoPath!).existsSync()) {
         debugPrint(
-          '[EXPORT] Ajout vidéo : sessionVideo_${session.id} => ${session.videoPath!}',
+          '[EXPORT][CREATE_PROJECT] Ajout vidéo : SessionVideos => ${session.videoPath!}',
         );
         request.files.add(
           await http.MultipartFile.fromPath(
-            'sessionVideo_${session.id}',
+            'SessionVideos',
             session.videoPath!,
           ),
         );
+        videoCount++;
       } else {
-        debugPrint('[EXPORT] Pas de vidéo pour session ${session.id}');
+        debugPrint(
+          '[EXPORT][CREATE_PROJECT] Pas de vidéo pour session ${session.name}',
+        );
       }
     }
+    debugPrint(
+      '[EXPORT][CREATE_PROJECT] Nombre total de vidéos exportées : $videoCount',
+    );
+    // Log détaillé du contenu du multipart
+    debugPrint('[EXPORT][CREATE_PROJECT] Fichiers envoyés dans le multipart :');
+    for (final f in request.files) {
+      debugPrint(
+        '  - ${f.field} (${f.filename ?? 'string'}) : ${f.length} octets',
+      );
+    }
+    debugPrint(
+      '[EXPORT][CREATE_PROJECT] Champs simples envoyés dans le multipart :',
+    );
+    request.fields.forEach((k, v) {
+      debugPrint('  - $k : ${v.length} caractères');
+    });
     final response = await client.send(request);
     if (response.statusCode != 201) {
       final errorBody = await response.stream.bytesToString();
@@ -209,10 +239,10 @@ class ExportService {
           .toList(),
     };
     if (session.startTime != null) {
-      map['StartTime'] = session.startTime!.toIso8601String();
+      map['StartTime'] = session.startTime!.toUtc().toIso8601String();
     }
     if (session.endTime != null) {
-      map['EndTime'] = session.endTime!.toIso8601String();
+      map['EndTime'] = session.endTime!.toUtc().toIso8601String();
     }
     return map;
   }

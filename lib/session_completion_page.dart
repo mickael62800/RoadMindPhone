@@ -57,6 +57,7 @@ class SessionCompletionPage extends StatefulWidget {
 }
 
 class _SessionCompletionPageState extends State<SessionCompletionPage> {
+  late Session _currentSession;
   LatLng? _currentLocation;
   CameraController? _cameraController;
   List<CameraDescription>? _cameras;
@@ -76,6 +77,8 @@ class _SessionCompletionPageState extends State<SessionCompletionPage> {
       'DEBUG SessionCompletionPage: initState - session.gpsData.length = ${widget.session.gpsData.length}',
     );
     _databaseHelper = widget.databaseHelper ?? DatabaseHelper.instance;
+    // Initialiser la session courante
+    _currentSession = widget.session;
     _initialize();
   }
 
@@ -233,6 +236,12 @@ class _SessionCompletionPageState extends State<SessionCompletionPage> {
       _duration = Duration.zero;
       // Réinitialiser les données GPS (supprimer le point temporaire)
       _gpsData = [];
+      // Si startTime absent, créer une copie de la session avec startTime
+      if (_currentSession.startTime == null) {
+        _currentSession = _currentSession.copy(
+          startTime: DateTime.now().toUtc(),
+        );
+      }
     });
 
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
@@ -274,12 +283,14 @@ class _SessionCompletionPageState extends State<SessionCompletionPage> {
     final XFile? videoFile = await _cameraController?.stopVideoRecording();
     debugPrint('DEBUG: Video file path: ${videoFile?.path}');
 
-    final updatedSession = widget.session.copy(
+    _currentSession = _currentSession.copy(
       duration: _duration,
       gpsPoints: _gpsData.length,
       gpsData: _gpsData,
       videoPath: videoFile?.path,
+      endTime: DateTime.now().toUtc(),
     );
+    final updatedSession = _currentSession;
 
     debugPrint(
       'DEBUG: Updated session - id: ${updatedSession.id}, duration: ${updatedSession.duration}, gpsPoints: ${updatedSession.gpsPoints}',
