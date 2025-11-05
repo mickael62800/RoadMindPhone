@@ -25,13 +25,10 @@ class ExportService {
   ExportService({required this.client, required this.baseUrl});
 
   /// Ajoute des sessions à un projet existant (multipart/form-data)
-  Future<void> createSessions(
-    String projectName,
-    List<Session> sessions,
-  ) async {
-    final encodedName = Uri.encodeComponent(projectName);
-    final url = Uri.parse('$baseUrl/api/Projects/$encodedName/sessions');
+  Future<void> createSessions(int projectId, List<Session> sessions) async {
+    final url = Uri.parse('$baseUrl/api/Projects/$projectId/sessions');
     final request = http.MultipartRequest('POST', url);
+    request.fields['projectId'] = projectId.toString();
     // Préparer le JSON SessionsData
     final sessionsData = sessions
         .map((session) => _sessionToJsonJson(session))
@@ -93,8 +90,12 @@ class ExportService {
     return {
       'id': session.id ?? 0,
       'name': session.name,
-      'startTime': session.startTime?.toIso8601String(),
-      'endTime': session.endTime?.toIso8601String(),
+      'startTime': session.startTime != null
+          ? session.startTime!.toUtc().toIso8601String()
+          : null,
+      'endTime': session.endTime != null
+          ? session.endTime!.toUtc().toIso8601String()
+          : null,
       'notes': session.notes,
       'gpsPoints': session.gpsData
           .map(
@@ -104,7 +105,7 @@ class ExportService {
               'altitude': gpsPoint.altitude,
               'speed': gpsPoint.speed,
               'heading': gpsPoint.heading,
-              'timestamp': gpsPoint.timestamp.toIso8601String(),
+              'timestamp': gpsPoint.timestamp.toUtc().toIso8601String(),
               'videoTimestampMs': gpsPoint.videoTimestampMs,
             },
           )

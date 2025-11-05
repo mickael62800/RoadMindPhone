@@ -108,7 +108,7 @@ class _ExportDataPageState extends State<ExportDataPage> {
                           ),
                           padding: const EdgeInsets.all(18),
                           child: Icon(
-                            Icons.upload_file,
+                            Icons.cloud_upload,
                             size: 70,
                             color: _projectExists! ? Colors.green : Colors.blue,
                           ),
@@ -120,6 +120,7 @@ class _ExportDataPageState extends State<ExportDataPage> {
                             fontSize: 22,
                             fontWeight: FontWeight.bold,
                             letterSpacing: 1.1,
+                            color: Colors.white,
                           ),
                           textAlign: TextAlign.center,
                         ),
@@ -143,7 +144,7 @@ class _ExportDataPageState extends State<ExportDataPage> {
                               : 'Appuyez sur le bouton ci-dessous pour créer le dossier distant.',
                           style: const TextStyle(
                             fontSize: 14,
-                            color: Colors.black54,
+                            color: Colors.white,
                           ),
                           textAlign: TextAlign.center,
                         ),
@@ -225,10 +226,7 @@ class _ExportDataPageState extends State<ExportDataPage> {
   Future<void> _addSessions() async {
     if (_exportService == null) return;
     try {
-      await _exportService!.createSessions(
-        widget.project.title,
-        widget.sessions,
-      );
+      await _exportService!.createSessions(widget.project.id!, widget.sessions);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Sessions ajoutées avec succès !')),
