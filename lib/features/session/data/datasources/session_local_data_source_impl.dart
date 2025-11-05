@@ -162,6 +162,7 @@ class SessionLocalDataSourceImpl implements SessionLocalDataSource {
       notes: session.notes,
       createdAt: DateTime.now(), // Legacy Session doesn't have createdAt
       updatedAt: null,
+      exported: session.exported,
     );
   }
 
@@ -178,6 +179,7 @@ class SessionLocalDataSourceImpl implements SessionLocalDataSource {
       startTime: model.startTime,
       endTime: model.endTime,
       notes: model.notes,
+      exported: model.exported,
     );
   }
 }

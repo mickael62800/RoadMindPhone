@@ -12,6 +12,9 @@ import 'package:roadmindphone/session_gps_point.dart';
 /// - Duration is calculated from startTime and endTime
 /// - GPS points are optional but tracked for analytics
 class SessionEntity extends Equatable {
+  /// Indique si la session a été exportée
+  final bool exported;
+
   /// Unique identifier for the session (null for new sessions)
   final int? id;
 
@@ -61,6 +64,7 @@ class SessionEntity extends Equatable {
     this.notes,
     required this.createdAt,
     this.updatedAt,
+    this.exported = false,
   });
 
   /// Creates a copy of this entity with the given fields replaced
@@ -77,6 +81,7 @@ class SessionEntity extends Equatable {
     String? notes,
     DateTime? createdAt,
     DateTime? updatedAt,
+    bool? exported,
   }) {
     return SessionEntity(
       id: id ?? this.id,
@@ -91,6 +96,7 @@ class SessionEntity extends Equatable {
       notes: notes ?? this.notes,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      exported: exported ?? this.exported,
     );
   }
 
@@ -126,6 +132,7 @@ class SessionEntity extends Equatable {
     notes,
     createdAt,
     updatedAt,
+    exported,
   ];
 
   @override
@@ -140,7 +147,8 @@ class SessionEntity extends Equatable {
         'startTime: $startTime, '
         'endTime: $endTime, '
         'createdAt: $createdAt, '
-        'updatedAt: $updatedAt'
+        'updatedAt: $updatedAt, '
+        'exported: $exported'
         ')';
   }
 }

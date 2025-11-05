@@ -385,10 +385,15 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
                             horizontal: 0,
                           ),
                           child: ListTile(
-                            leading: const Icon(
-                              Icons.videocam,
-                              color: Colors.blue,
-                            ),
+                            leading: session.exported == true
+                                ? const Icon(
+                                    Icons.cloud_done,
+                                    color: Colors.green,
+                                  )
+                                : const Icon(
+                                    Icons.cloud_upload,
+                                    color: Colors.grey,
+                                  ),
                             title: Text(session.name),
                             subtitle: Text(
                               'Durée: ${_formatDuration(session.duration)} | GPS: ${session.gpsPoints} points',

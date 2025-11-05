@@ -196,7 +196,7 @@ class _ProjectIndexPageState extends State<ProjectIndexPage> {
           final List<Session> sessions;
           if (state is SessionsLoaded) {
             sessions = state.sessions.map((entity) {
-              // Convert SessionEntity back to Session for UI
+              // Convert SessionEntity back to Session for UI, en copiant exported
               return Session(
                 id: entity.id,
                 projectId: entity.projectId,
@@ -208,6 +208,7 @@ class _ProjectIndexPageState extends State<ProjectIndexPage> {
                 startTime: entity.startTime,
                 endTime: entity.endTime,
                 notes: entity.notes,
+                exported: entity.exported,
               );
             }).toList();
           } else {
@@ -233,11 +234,8 @@ class _ProjectIndexPageState extends State<ProjectIndexPage> {
                   'Durée: ${_formatDuration(session.duration)} | GPS Points: ${session.gpsPoints}',
               onTapBuilder: (session) async {
                 if (!mounted) return;
-
-                // Capture context before async operation
                 final navigator = Navigator.of(context);
                 final sessionBloc = context.read<SessionBloc>();
-
                 final bool? hasChanged = await navigator.push<bool>(
                   MaterialPageRoute(
                     builder: (context) => SessionIndexPage(
@@ -248,6 +246,21 @@ class _ProjectIndexPageState extends State<ProjectIndexPage> {
                 );
                 if (hasChanged == true && mounted) {
                   sessionBloc.add(LoadSessionsForProjectEvent(projectId));
+                }
+              },
+              trailingBuilder: (session) {
+                if (session.exported == true) {
+                  return const Icon(
+                    Icons.cloud_done,
+                    color: Colors.green,
+                    size: 28,
+                  );
+                } else {
+                  return const Icon(
+                    Icons.cloud_upload,
+                    color: Colors.grey,
+                    size: 28,
+                  );
                 }
               },
             ),

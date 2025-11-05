@@ -12,6 +12,7 @@ class Session {
   final DateTime? startTime;
   final DateTime? endTime;
   final String? notes;
+  final bool exported;
 
   Session({
     this.id,
@@ -24,6 +25,7 @@ class Session {
     this.startTime,
     this.endTime,
     this.notes,
+    this.exported = false,
   });
 
   Session copy({
@@ -37,47 +39,54 @@ class Session {
     DateTime? startTime,
     DateTime? endTime,
     String? notes,
-  }) =>
-      Session(
-        id: id ?? this.id,
-        projectId: projectId ?? this.projectId,
-        name: name ?? this.name,
-        duration: duration ?? this.duration,
-        gpsPoints: gpsPoints ?? this.gpsPoints,
-        videoPath: videoPath ?? this.videoPath,
-        gpsData: gpsData ?? this.gpsData,
-        startTime: startTime ?? this.startTime,
-        endTime: endTime ?? this.endTime,
-        notes: notes ?? this.notes,
-      );
+    bool? exported,
+  }) => Session(
+    id: id ?? this.id,
+    projectId: projectId ?? this.projectId,
+    name: name ?? this.name,
+    duration: duration ?? this.duration,
+    gpsPoints: gpsPoints ?? this.gpsPoints,
+    videoPath: videoPath ?? this.videoPath,
+    gpsData: gpsData ?? this.gpsData,
+    startTime: startTime ?? this.startTime,
+    endTime: endTime ?? this.endTime,
+    notes: notes ?? this.notes,
+    exported: exported ?? this.exported,
+  );
 
   static Session fromMap(Map<String, dynamic> map) => Session(
-        id: map['id'] as int?,
-        projectId: map['projectId'] as int,
-        name: map['name'] as String,
-        duration: Duration(milliseconds: map['duration'] as int),
-        gpsPoints: map['gpsPoints'] as int,
-        videoPath: map['videoPath'] as String?,
-        gpsData: map['gpsData'] == null
-            ? []
-            : (json.decode(map['gpsData'] as String) as List)
-                .map((e) => SessionGpsPoint.fromMap(e as Map<String, dynamic>))
-                .toList(),
-        startTime: map['startTime'] != null ? DateTime.parse(map['startTime'] as String) : null,
-        endTime: map['endTime'] != null ? DateTime.parse(map['endTime'] as String) : null,
-        notes: map['notes'] as String?,
-      );
+    id: map['id'] as int?,
+    projectId: map['projectId'] as int,
+    name: map['name'] as String,
+    duration: Duration(milliseconds: map['duration'] as int),
+    gpsPoints: map['gpsPoints'] as int,
+    videoPath: map['videoPath'] as String?,
+    gpsData: map['gpsData'] == null
+        ? []
+        : (json.decode(map['gpsData'] as String) as List)
+              .map((e) => SessionGpsPoint.fromMap(e as Map<String, dynamic>))
+              .toList(),
+    startTime: map['startTime'] != null
+        ? DateTime.parse(map['startTime'] as String)
+        : null,
+    endTime: map['endTime'] != null
+        ? DateTime.parse(map['endTime'] as String)
+        : null,
+    notes: map['notes'] as String?,
+    exported: map['exported'] == 1 || map['exported'] == true,
+  );
 
   Map<String, dynamic> toMap() => {
-        'id': id,
-        'projectId': projectId,
-        'name': name,
-        'duration': duration.inMilliseconds,
-        'gpsPoints': gpsPoints,
-        'videoPath': videoPath,
-        'gpsData': json.encode(gpsData.map((e) => e.toMap()).toList()),
-        'startTime': startTime?.toIso8601String(),
-        'endTime': endTime?.toIso8601String(),
-        'notes': notes,
-      };
+    'id': id,
+    'projectId': projectId,
+    'name': name,
+    'duration': duration.inMilliseconds,
+    'gpsPoints': gpsPoints,
+    'videoPath': videoPath,
+    'gpsData': json.encode(gpsData.map((e) => e.toMap()).toList()),
+    'startTime': startTime?.toIso8601String(),
+    'endTime': endTime?.toIso8601String(),
+    'notes': notes,
+    'exported': exported ? 1 : 0,
+  };
 }

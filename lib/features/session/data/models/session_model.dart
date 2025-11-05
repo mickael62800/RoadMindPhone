@@ -19,6 +19,7 @@ class SessionModel extends SessionEntity {
     super.notes,
     required super.createdAt,
     required super.updatedAt,
+    super.exported = false,
   });
 
   /// Creates a SessionModel from a SessionEntity
@@ -36,6 +37,7 @@ class SessionModel extends SessionEntity {
       notes: entity.notes,
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,
+      exported: entity.exported,
     );
   }
 
@@ -65,6 +67,7 @@ class SessionModel extends SessionEntity {
       updatedAt: map['updatedAt'] != null
           ? DateTime.parse(map['updatedAt'] as String)
           : null,
+      exported: map['exported'] == 1 || map['exported'] == true,
     );
   }
 
@@ -97,6 +100,7 @@ class SessionModel extends SessionEntity {
       updatedAt: map['updatedAt'] != null
           ? DateTime.parse(map['updatedAt'] as String)
           : null,
+      exported: map['exported'] == 1 || map['exported'] == true,
     );
   }
 
@@ -116,6 +120,7 @@ class SessionModel extends SessionEntity {
       'notes': notes,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt?.toIso8601String(),
+      'exported': exported ? 1 : 0,
     };
   }
 
@@ -134,6 +139,7 @@ class SessionModel extends SessionEntity {
       notes: notes,
       createdAt: createdAt,
       updatedAt: updatedAt,
+      exported: exported,
     );
   }
 
@@ -152,6 +158,7 @@ class SessionModel extends SessionEntity {
     String? notes,
     DateTime? createdAt,
     DateTime? updatedAt,
+    bool? exported,
   }) {
     return SessionModel(
       id: id ?? this.id,
@@ -166,6 +173,7 @@ class SessionModel extends SessionEntity {
       notes: notes ?? this.notes,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      exported: exported ?? this.exported,
     );
   }
 }

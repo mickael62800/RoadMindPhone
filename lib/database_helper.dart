@@ -46,6 +46,12 @@ class DatabaseHelper {
   }
 
   Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 8) {
+      // Ajout colonne exported si migration depuis une version précédente
+      await db.execute(
+        'ALTER TABLE sessions ADD COLUMN exported INTEGER NOT NULL DEFAULT 0',
+      );
+    }
     if (oldVersion < 7) {
       await db.execute('DROP TABLE IF EXISTS sessions');
       await db.execute('DROP TABLE IF EXISTS projects');
@@ -82,6 +88,7 @@ CREATE TABLE sessions (
   startTime TEXT,
   endTime TEXT,
   notes TEXT,
+  exported INTEGER NOT NULL DEFAULT 0,
   FOREIGN KEY (projectId) REFERENCES projects (id) ON DELETE CASCADE
 )
 ''');
