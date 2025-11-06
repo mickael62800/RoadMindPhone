@@ -32,7 +32,7 @@ abstract class ProjectRepository {
   /// Possible failures:
   /// - [NotFoundFailure]: Project with given ID doesn't exist
   /// - [DatabaseFailure]: Database operation failed
-  ResultFuture<ProjectEntity> getProject(int id);
+  ResultFuture<ProjectEntity> getProject(String id);
 
   /// Get all projects
   ///
@@ -61,7 +61,7 @@ abstract class ProjectRepository {
   /// Possible failures:
   /// - [NotFoundFailure]: Project with given ID doesn't exist
   /// - [DatabaseFailure]: Database operation failed
-  ResultVoid deleteProject(int id);
+  ResultVoid deleteProject(String id);
 
   /// Get projects count
   ///
@@ -86,5 +86,5 @@ abstract class ProjectRepository {
   ///
   /// Possible failures:
   /// - [DatabaseFailure]: Database operation failed
-  ResultFuture<bool> projectExists(int id);
+  ResultFuture<bool> projectExists(String id);
 }

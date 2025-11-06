@@ -5,7 +5,7 @@
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _i11;
 import 'dart:convert' as _i12;
-import 'dart:math' as _i18;
+import 'dart:math' as _i19;
 import 'dart:typed_data' as _i14;
 import 'dart:ui' as _i21;
 
@@ -14,9 +14,9 @@ import 'package:camera_platform_interface/camera_platform_interface.dart'
     as _i7;
 import 'package:flutter/services.dart' as _i9;
 import 'package:flutter/widgets.dart' as _i8;
-import 'package:geolocator_platform_interface/src/enums/enums.dart' as _i17;
+import 'package:geolocator_platform_interface/src/enums/enums.dart' as _i18;
 import 'package:geolocator_platform_interface/src/geolocator_platform_interface.dart'
-    as _i16;
+    as _i17;
 import 'package:geolocator_platform_interface/src/models/models.dart' as _i6;
 import 'package:http/http.dart' as _i2;
 import 'package:mockito/mockito.dart' as _i1;
@@ -26,8 +26,8 @@ import 'package:permission_handler_platform_interface/permission_handler_platfor
 import 'package:roadmindphone/database_helper.dart' as _i15;
 import 'package:roadmindphone/project.dart' as _i4;
 import 'package:roadmindphone/session.dart' as _i5;
-import 'package:roadmindphone/session_gps_point.dart' as _i20;
-import 'package:shared_preferences/src/shared_preferences_legacy.dart' as _i19;
+import 'package:roadmindphone/session_gps_point.dart' as _i16;
+import 'package:shared_preferences/src/shared_preferences_legacy.dart' as _i20;
 import 'package:sqflite/sqflite.dart' as _i3;
 
 // ignore_for_file: type=lint
@@ -311,6 +311,36 @@ class MockDatabaseHelper extends _i1.Mock implements _i15.DatabaseHelper {
           as _i11.Future<_i3.Database>);
 
   @override
+  _i11.Future<void> insertSessionGpsPoint(_i16.SessionGpsPoint? point) =>
+      (super.noSuchMethod(
+            Invocation.method(#insertSessionGpsPoint, [point]),
+            returnValue: _i11.Future<void>.value(),
+            returnValueForMissingStub: _i11.Future<void>.value(),
+          )
+          as _i11.Future<void>);
+
+  @override
+  _i11.Future<List<_i16.SessionGpsPoint>> getSessionGpsPoints(
+    String? sessionId,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#getSessionGpsPoints, [sessionId]),
+            returnValue: _i11.Future<List<_i16.SessionGpsPoint>>.value(
+              <_i16.SessionGpsPoint>[],
+            ),
+          )
+          as _i11.Future<List<_i16.SessionGpsPoint>>);
+
+  @override
+  _i11.Future<void> deleteSessionGpsPoints(String? sessionId) =>
+      (super.noSuchMethod(
+            Invocation.method(#deleteSessionGpsPoints, [sessionId]),
+            returnValue: _i11.Future<void>.value(),
+            returnValueForMissingStub: _i11.Future<void>.value(),
+          )
+          as _i11.Future<void>);
+
+  @override
   _i11.Future<_i4.Project> create(_i4.Project? project) =>
       (super.noSuchMethod(
             Invocation.method(#create, [project]),
@@ -334,7 +364,7 @@ class MockDatabaseHelper extends _i1.Mock implements _i15.DatabaseHelper {
           as _i11.Future<_i5.Session>);
 
   @override
-  _i11.Future<_i4.Project> readProject(int? id) =>
+  _i11.Future<_i4.Project> readProject(String? id) =>
       (super.noSuchMethod(
             Invocation.method(#readProject, [id]),
             returnValue: _i11.Future<_i4.Project>.value(
@@ -344,7 +374,7 @@ class MockDatabaseHelper extends _i1.Mock implements _i15.DatabaseHelper {
           as _i11.Future<_i4.Project>);
 
   @override
-  _i11.Future<_i5.Session> readSession(int? id) =>
+  _i11.Future<_i5.Session> readSession(String? id) =>
       (super.noSuchMethod(
             Invocation.method(#readSession, [id]),
             returnValue: _i11.Future<_i5.Session>.value(
@@ -362,7 +392,7 @@ class MockDatabaseHelper extends _i1.Mock implements _i15.DatabaseHelper {
           as _i11.Future<List<_i4.Project>>);
 
   @override
-  _i11.Future<List<_i5.Session>> readAllSessionsForProject(int? projectId) =>
+  _i11.Future<List<_i5.Session>> readAllSessionsForProject(String? projectId) =>
       (super.noSuchMethod(
             Invocation.method(#readAllSessionsForProject, [projectId]),
             returnValue: _i11.Future<List<_i5.Session>>.value(<_i5.Session>[]),
@@ -386,7 +416,7 @@ class MockDatabaseHelper extends _i1.Mock implements _i15.DatabaseHelper {
           as _i11.Future<int>);
 
   @override
-  _i11.Future<int> delete(int? id) =>
+  _i11.Future<int> delete(String? id) =>
       (super.noSuchMethod(
             Invocation.method(#delete, [id]),
             returnValue: _i11.Future<int>.value(0),
@@ -394,7 +424,7 @@ class MockDatabaseHelper extends _i1.Mock implements _i15.DatabaseHelper {
           as _i11.Future<int>);
 
   @override
-  _i11.Future<int> deleteSession(int? id) =>
+  _i11.Future<int> deleteSession(String? id) =>
       (super.noSuchMethod(
             Invocation.method(#deleteSession, [id]),
             returnValue: _i11.Future<int>.value(0),
@@ -414,30 +444,30 @@ class MockDatabaseHelper extends _i1.Mock implements _i15.DatabaseHelper {
 ///
 /// See the documentation for Mockito's code generation for more information.
 class MockGeolocatorPlatform extends _i1.Mock
-    implements _i16.GeolocatorPlatform {
+    implements _i17.GeolocatorPlatform {
   MockGeolocatorPlatform() {
     _i1.throwOnMissingStub(this);
   }
 
   @override
-  _i11.Future<_i17.LocationPermission> checkPermission() =>
+  _i11.Future<_i18.LocationPermission> checkPermission() =>
       (super.noSuchMethod(
             Invocation.method(#checkPermission, []),
-            returnValue: _i11.Future<_i17.LocationPermission>.value(
-              _i17.LocationPermission.denied,
+            returnValue: _i11.Future<_i18.LocationPermission>.value(
+              _i18.LocationPermission.denied,
             ),
           )
-          as _i11.Future<_i17.LocationPermission>);
+          as _i11.Future<_i18.LocationPermission>);
 
   @override
-  _i11.Future<_i17.LocationPermission> requestPermission() =>
+  _i11.Future<_i18.LocationPermission> requestPermission() =>
       (super.noSuchMethod(
             Invocation.method(#requestPermission, []),
-            returnValue: _i11.Future<_i17.LocationPermission>.value(
-              _i17.LocationPermission.denied,
+            returnValue: _i11.Future<_i18.LocationPermission>.value(
+              _i18.LocationPermission.denied,
             ),
           )
-          as _i11.Future<_i17.LocationPermission>);
+          as _i11.Future<_i18.LocationPermission>);
 
   @override
   _i11.Future<bool> isLocationServiceEnabled() =>
@@ -479,12 +509,12 @@ class MockGeolocatorPlatform extends _i1.Mock
           as _i11.Future<_i6.Position>);
 
   @override
-  _i11.Stream<_i17.ServiceStatus> getServiceStatusStream() =>
+  _i11.Stream<_i18.ServiceStatus> getServiceStatusStream() =>
       (super.noSuchMethod(
             Invocation.method(#getServiceStatusStream, []),
-            returnValue: _i11.Stream<_i17.ServiceStatus>.empty(),
+            returnValue: _i11.Stream<_i18.ServiceStatus>.empty(),
           )
-          as _i11.Stream<_i17.ServiceStatus>);
+          as _i11.Stream<_i18.ServiceStatus>);
 
   @override
   _i11.Stream<_i6.Position> getPositionStream({
@@ -499,28 +529,28 @@ class MockGeolocatorPlatform extends _i1.Mock
           as _i11.Stream<_i6.Position>);
 
   @override
-  _i11.Future<_i17.LocationAccuracyStatus> requestTemporaryFullAccuracy({
+  _i11.Future<_i18.LocationAccuracyStatus> requestTemporaryFullAccuracy({
     required String? purposeKey,
   }) =>
       (super.noSuchMethod(
             Invocation.method(#requestTemporaryFullAccuracy, [], {
               #purposeKey: purposeKey,
             }),
-            returnValue: _i11.Future<_i17.LocationAccuracyStatus>.value(
-              _i17.LocationAccuracyStatus.reduced,
+            returnValue: _i11.Future<_i18.LocationAccuracyStatus>.value(
+              _i18.LocationAccuracyStatus.reduced,
             ),
           )
-          as _i11.Future<_i17.LocationAccuracyStatus>);
+          as _i11.Future<_i18.LocationAccuracyStatus>);
 
   @override
-  _i11.Future<_i17.LocationAccuracyStatus> getLocationAccuracy() =>
+  _i11.Future<_i18.LocationAccuracyStatus> getLocationAccuracy() =>
       (super.noSuchMethod(
             Invocation.method(#getLocationAccuracy, []),
-            returnValue: _i11.Future<_i17.LocationAccuracyStatus>.value(
-              _i17.LocationAccuracyStatus.reduced,
+            returnValue: _i11.Future<_i18.LocationAccuracyStatus>.value(
+              _i18.LocationAccuracyStatus.reduced,
             ),
           )
-          as _i11.Future<_i17.LocationAccuracyStatus>);
+          as _i11.Future<_i18.LocationAccuracyStatus>);
 
   @override
   _i11.Future<bool> openAppSettings() =>
@@ -829,7 +859,7 @@ class MockCameraPlatform extends _i1.Mock implements _i7.CameraPlatform {
   @override
   _i11.Future<void> setExposurePoint(
     int? cameraId,
-    _i18.Point<double>? point,
+    _i19.Point<double>? point,
   ) =>
       (super.noSuchMethod(
             Invocation.method(#setExposurePoint, [cameraId, point]),
@@ -880,7 +910,7 @@ class MockCameraPlatform extends _i1.Mock implements _i7.CameraPlatform {
           as _i11.Future<void>);
 
   @override
-  _i11.Future<void> setFocusPoint(int? cameraId, _i18.Point<double>? point) =>
+  _i11.Future<void> setFocusPoint(int? cameraId, _i19.Point<double>? point) =>
       (super.noSuchMethod(
             Invocation.method(#setFocusPoint, [cameraId, point]),
             returnValue: _i11.Future<void>.value(),
@@ -978,7 +1008,7 @@ class MockCameraPlatform extends _i1.Mock implements _i7.CameraPlatform {
 /// A class which mocks [SharedPreferences].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockSharedPreferences extends _i1.Mock implements _i19.SharedPreferences {
+class MockSharedPreferences extends _i1.Mock implements _i20.SharedPreferences {
   MockSharedPreferences() {
     _i1.throwOnMissingStub(this);
   }
@@ -1107,6 +1137,14 @@ class MockProject extends _i1.Mock implements _i4.Project {
   }
 
   @override
+  String get id =>
+      (super.noSuchMethod(
+            Invocation.getter(#id),
+            returnValue: _i13.dummyValue<String>(this, Invocation.getter(#id)),
+          )
+          as String);
+
+  @override
   String get title =>
       (super.noSuchMethod(
             Invocation.getter(#title),
@@ -1132,7 +1170,7 @@ class MockProject extends _i1.Mock implements _i4.Project {
 
   @override
   _i4.Project copy({
-    int? id,
+    String? id,
     String? title,
     String? description,
     int? sessionCount,
@@ -1180,9 +1218,23 @@ class MockSession extends _i1.Mock implements _i5.Session {
   }
 
   @override
-  int get projectId =>
-      (super.noSuchMethod(Invocation.getter(#projectId), returnValue: 0)
-          as int);
+  String get id =>
+      (super.noSuchMethod(
+            Invocation.getter(#id),
+            returnValue: _i13.dummyValue<String>(this, Invocation.getter(#id)),
+          )
+          as String);
+
+  @override
+  String get projectId =>
+      (super.noSuchMethod(
+            Invocation.getter(#projectId),
+            returnValue: _i13.dummyValue<String>(
+              this,
+              Invocation.getter(#projectId),
+            ),
+          )
+          as String);
 
   @override
   String get name =>
@@ -1209,25 +1261,31 @@ class MockSession extends _i1.Mock implements _i5.Session {
           as int);
 
   @override
-  List<_i20.SessionGpsPoint> get gpsData =>
+  List<_i16.SessionGpsPoint> get gpsData =>
       (super.noSuchMethod(
             Invocation.getter(#gpsData),
-            returnValue: <_i20.SessionGpsPoint>[],
+            returnValue: <_i16.SessionGpsPoint>[],
           )
-          as List<_i20.SessionGpsPoint>);
+          as List<_i16.SessionGpsPoint>);
+
+  @override
+  bool get exported =>
+      (super.noSuchMethod(Invocation.getter(#exported), returnValue: false)
+          as bool);
 
   @override
   _i5.Session copy({
-    int? id,
-    int? projectId,
+    String? id,
+    String? projectId,
     String? name,
     Duration? duration,
     int? gpsPoints,
     String? videoPath,
-    List<_i20.SessionGpsPoint>? gpsData,
+    List<_i16.SessionGpsPoint>? gpsData,
     DateTime? startTime,
     DateTime? endTime,
     String? notes,
+    bool? exported,
   }) =>
       (super.noSuchMethod(
             Invocation.method(#copy, [], {
@@ -1241,6 +1299,7 @@ class MockSession extends _i1.Mock implements _i5.Session {
               #startTime: startTime,
               #endTime: endTime,
               #notes: notes,
+              #exported: exported,
             }),
             returnValue: _FakeSession_4(
               this,
@@ -1255,6 +1314,7 @@ class MockSession extends _i1.Mock implements _i5.Session {
                 #startTime: startTime,
                 #endTime: endTime,
                 #notes: notes,
+                #exported: exported,
               }),
             ),
           )

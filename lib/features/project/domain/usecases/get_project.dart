@@ -19,8 +19,9 @@ class GetProject implements UseCase<ProjectEntity, GetProjectParams> {
 }
 
 /// Parameters for getting a project
+
 class GetProjectParams extends Equatable {
-  final int id;
+  final String id;
 
   const GetProjectParams(this.id);
 

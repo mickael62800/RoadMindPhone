@@ -40,7 +40,7 @@ class UpdateProjectEvent extends ProjectEvent {
 
 /// Event to delete a project
 class DeleteProjectEvent extends ProjectEvent {
-  final int projectId;
+  final String projectId;
 
   const DeleteProjectEvent({required this.projectId});
 
@@ -60,7 +60,7 @@ class SearchProjectsEvent extends ProjectEvent {
 
 /// Event to get a specific project by ID
 class GetProjectEvent extends ProjectEvent {
-  final int projectId;
+  final String projectId;
 
   const GetProjectEvent({required this.projectId});
 
@@ -75,7 +75,7 @@ class GetProjectsCountEvent extends ProjectEvent {
 
 /// Event to check if a project exists
 class CheckProjectExistsEvent extends ProjectEvent {
-  final int projectId;
+  final String projectId;
 
   const CheckProjectExistsEvent({required this.projectId});
 

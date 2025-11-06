@@ -1,19 +1,25 @@
-import 'dart:convert';
-import 'dart:math';
+import 'package:roadmindphone/src/ui/widgets/dialogs/rename_dialog.dart';
+import 'package:roadmindphone/src/ui/widgets/dialogs/confirm_dialog.dart';
+import 'package:roadmindphone/services/session_service/calculate_session_stats.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:geolocator/geolocator.dart';
+import 'package:roadmindphone/services/location_service.dart';
 import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:roadmindphone/services/session_service/redo_session.dart';
+import 'package:roadmindphone/services/session_service/rename_session.dart';
+import 'package:roadmindphone/services/session_service/delete_session_with_file.dart';
+import 'package:roadmindphone/services/session_service/export_session_data.dart';
 import 'package:video_player/video_player.dart';
 import 'package:roadmindphone/database_helper.dart';
 import 'package:roadmindphone/session.dart';
 import 'package:roadmindphone/session_completion_page.dart';
 import 'package:roadmindphone/features/session/domain/entities/session_entity.dart';
 
-import 'package:roadmindphone/src/ui/molecules/molecules.dart';
-import 'package:roadmindphone/src/ui/widgets/session_detail/session_detail_widgets.dart';
+import 'package:roadmindphone/src/ui/widgets/session/session_detail_layout.dart';
+import 'package:roadmindphone/src/ui/widgets/session/session_index_app_bar.dart';
+import 'package:roadmindphone/src/ui/widgets/session/session_index_loader.dart';
 
 /// Extension to convert legacy Session to SessionEntity
 extension SessionToEntity on Session {
@@ -112,24 +118,21 @@ class _SessionIndexPageState extends State<SessionIndexPage> {
   }
 
   Future<void> _refreshSession() async {
-    // Read directly from database for immediate UI update
-    if (_session.id != null) {
-      try {
-        final updatedSession = await DatabaseHelper.instance.readSession(
-          _session.id!,
-        );
-        if (mounted) {
-          // NE PAS faire setState ici pour éviter le rebuild prématuré
-          _session = updatedSession;
-          _calculateSessionDataWithoutSetState();
-        }
-      } catch (e) {
-        // Handle error silently or show a snackbar
-        debugPrint('Error refreshing session: $e');
+    try {
+      final updatedSession = await DatabaseHelper.instance.readSession(
+        _session.id,
+      );
+      if (mounted) {
+        _session = updatedSession;
+        _calculateSessionDataWithoutSetState();
       }
+    } catch (e) {
+      debugPrint('Error refreshing session: $e');
     }
-
-    await _determinePosition();
+    await initializeLocation(
+      sessionId: _session.id,
+      existingGpsData: _session.gpsData,
+    );
   }
 
   Future<void> _initializeVideo() async {
@@ -140,9 +143,7 @@ class _SessionIndexPageState extends State<SessionIndexPage> {
         );
         _initializeVideoPlayerFuture = _videoController!.initialize();
         await _initializeVideoPlayerFuture;
-        if (mounted) {
-          setState(() {}); // Rafraîchir pour afficher la vidéo
-        }
+        if (mounted) setState(() {});
       } catch (e) {
         debugPrint('Error initializing video: $e');
       }
@@ -155,124 +156,44 @@ class _SessionIndexPageState extends State<SessionIndexPage> {
     super.dispose();
   }
 
-  Future<void> _determinePosition() async {
-    bool serviceEnabled;
-    LocationPermission permission;
-
-    serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      return;
-    }
-
-    permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        return;
-      }
-    }
-
-    if (permission == LocationPermission.deniedForever) {
-      return;
-    }
-
-    await Geolocator.getCurrentPosition();
-  }
-
-  double _calculateDistance(
-    double lat1,
-    double lon1,
-    double lat2,
-    double lon2,
-  ) {
-    const p = 0.017453292519943295; // Math.PI / 180
-    final a =
-        0.5 -
-        cos((lat2 - lat1) * p) / 2 +
-        cos(lat1 * p) * cos(lat2 * p) * (1 - cos((lon2 - lon1) * p)) / 2;
-    return 12742 * asin(sqrt(a)); // 2 * R; R = 6371 km
-  }
-
   void _calculateSessionData() {
-    if (_session.gpsData.length > 1) {
-      double totalDistance = 0;
-      double totalSpeed = 0;
-
-      for (int i = 0; i < _session.gpsData.length - 1; i++) {
-        final point1 = _session.gpsData[i];
-        final point2 = _session.gpsData[i + 1];
-        totalDistance += _calculateDistance(
-          point1.latitude,
-          point1.longitude,
-          point2.latitude,
-          point2.longitude,
-        );
-      }
-
-      for (final point in _session.gpsData) {
-        totalSpeed += point.speed ?? 0.0;
-      }
-
-      setState(() {
-        _totalDistance = totalDistance;
-        _averageSpeed = _session.gpsData.isNotEmpty
-            ? totalSpeed /
-                  _session.gpsData.length *
-                  3.6 // convert m/s to km/h
-            : 0.0;
-      });
-    }
+    final stats = calculateSessionStats(_session);
+    setState(() {
+      _totalDistance = stats['totalDistance'] ?? 0.0;
+      _averageSpeed = stats['averageSpeed'] ?? 0.0;
+    });
   }
 
   void _calculateSessionDataWithoutSetState() {
-    if (_session.gpsData.length > 1) {
-      double totalDistance = 0;
-      double totalSpeed = 0;
+    final stats = calculateSessionStats(_session);
+    _totalDistance = stats['totalDistance'] ?? 0.0;
+    _averageSpeed = stats['averageSpeed'] ?? 0.0;
+  }
 
-      for (int i = 0; i < _session.gpsData.length - 1; i++) {
-        final point1 = _session.gpsData[i];
-        final point2 = _session.gpsData[i + 1];
-        totalDistance += _calculateDistance(
-          point1.latitude,
-          point1.longitude,
-          point2.latitude,
-          point2.longitude,
-        );
-      }
-
-      for (final point in _session.gpsData) {
-        totalSpeed += point.speed ?? 0.0;
-      }
-
-      // Mise à jour directe sans setState
-      _totalDistance = totalDistance;
-      _averageSpeed = _session.gpsData.isNotEmpty
-          ? totalSpeed /
-                _session.gpsData.length *
-                3.6 // convert m/s to km/h
-          : 0.0;
+  void _onMenuSelected(String value) {
+    if (value == 'Editer') {
+      _showRenameDialog();
+    } else if (value == 'Supprimer') {
+      _showDeleteConfirmationDialog();
+    } else if (value == 'Refaire') {
+      _showRedoConfirmationDialog();
+    } else if (value == 'Exporter') {
+      _exportSessionData();
+    } else {
+      debugPrint('Value: $value');
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Afficher un loader pendant l'initialisation
+    // Afficher un loader modulaire pendant l'initialisation
     if (_isInitializing) {
       return Scaffold(
-        appBar: AppBar(
-          title: Text(_session.name),
-          backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        appBar: SessionIndexAppBar(
+          title: _session.name,
+          onMenuSelected: _onMenuSelected,
         ),
-        body: const Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Chargement de la session...'),
-            ],
-          ),
-        ),
+        body: const SessionIndexLoader(message: 'Chargement de la session...'),
       );
     }
 
@@ -284,96 +205,22 @@ class _SessionIndexPageState extends State<SessionIndexPage> {
         }
       },
       child: Scaffold(
-        appBar: AppBar(
-          title: Text(_session.name),
-          backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-          actions: <Widget>[
-            PopupMenuButton<String>(
-              onSelected: (value) {
-                if (value == 'Editer') {
-                  _showRenameDialog();
-                } else if (value == 'Supprimer') {
-                  _showDeleteConfirmationDialog();
-                } else if (value == 'Refaire') {
-                  _showRedoConfirmationDialog();
-                } else if (value == 'Exporter') {
-                  _exportSessionData();
-                } else {
-                  debugPrint('Value: $value');
-                }
-              },
-              itemBuilder: (BuildContext context) {
-                return {'Editer', 'Supprimer', 'Refaire', 'Exporter'}.map((
-                  String choice,
-                ) {
-                  return PopupMenuItem<String>(
-                    value: choice,
-                    child: Text(choice),
-                  );
-                }).toList();
-              },
-            ),
-          ],
+        appBar: SessionIndexAppBar(
+          title: _session.name,
+          onMenuSelected: _onMenuSelected,
         ),
         body: OrientationBuilder(
           builder: (context, orientation) {
             final isLandscape = orientation == Orientation.landscape;
-            final statsWidget = SessionStatsWidget(
+            return SessionDetailLayout(
               session: _session,
               averageSpeed: _averageSpeed,
               totalDistance: _totalDistance,
-            );
-
-            final mapWidget = SessionMapWidget(
-              key: ValueKey('map_${_session.id}_${_session.gpsData.length}'),
-              session: _session,
-              mapBuilder: widget.flutterMapBuilder,
-              isLandscape: isLandscape,
-            );
-
-            final videoWidget = SessionVideoPlayerWidget(
               videoController: _videoController,
               initializeVideoPlayerFuture: _initializeVideoPlayerFuture,
               isLandscape: isLandscape,
+              flutterMapBuilder: widget.flutterMapBuilder,
             );
-
-            if (isLandscape) {
-              return Column(
-                children: [
-                  SizedBox(
-                    height: 120,
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8.0,
-                        vertical: 8.0,
-                      ),
-                      child: statsWidget,
-                    ),
-                  ),
-                  Expanded(
-                    flex: 4,
-                    child: Row(children: [mapWidget, videoWidget]),
-                  ),
-                ],
-              );
-            } else {
-              return SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const SizedBox(height: 16.0),
-                    statsWidget,
-                    const SizedBox(height: 16.0),
-                    mapWidget,
-                    const SizedBox(height: 16.0),
-                    videoWidget,
-                    const SizedBox(height: 16.0),
-                  ],
-                ),
-              );
-            }
           },
         ),
       ),
@@ -381,188 +228,115 @@ class _SessionIndexPageState extends State<SessionIndexPage> {
   }
 
   void _showDeleteConfirmationDialog() async {
-    final confirmed = await showConfirmationDialog(
+    final confirmed = await showDialog<bool>(
       context: context,
-      title: 'Supprimer la session',
-      content: 'Êtes-vous sûr de vouloir supprimer cette session ?',
-      confirmText: 'SUPPRIMER',
+      builder: (context) => ConfirmDialog(
+        title: 'Supprimer la session',
+        content: 'Êtes-vous sûr de vouloir supprimer cette session ?',
+        confirmText: 'SUPPRIMER',
+        onConfirm: () {},
+      ),
     );
-
     if (confirmed == true) {
       if (!mounted) return;
       final navigator = Navigator.of(context);
-
-      try {
-        // Delete directly from database
-        await DatabaseHelper.instance.deleteSession(_session.id!);
-
-        // Delete video file if exists
-        if (_session.videoPath != null &&
-            File(_session.videoPath!).existsSync()) {
-          await File(_session.videoPath!).delete();
-        }
-
-        if (!mounted) return;
-        navigator.pop(true); // Go back and indicate change
-      } catch (e) {
-        if (!mounted) return;
+      final result = await deleteSessionWithFile(session: _session);
+      if (result && mounted) {
+        navigator.pop(true);
+      } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur lors de la suppression: $e')),
+          const SnackBar(content: Text('Erreur lors de la suppression.')),
         );
       }
     }
   }
 
   void _showRenameDialog() async {
-    final newName = await showRenameDialog(
+    final newName = await showDialog<String>(
       context: context,
-      title: 'Renommer la session',
-      hintText: 'Nouveau nom de la session',
-      initialValue: _session.name,
+      builder: (context) => RenameDialog(
+        title: 'Renommer la session',
+        hintText: 'Nouveau nom de la session',
+        initialValue: _session.name,
+      ),
     );
-
     if (newName != null && newName.isNotEmpty) {
       if (!mounted) return;
-
-      try {
-        final updatedSession = _session.copy(name: newName);
-
-        // Update directly in database
-        await DatabaseHelper.instance.updateSession(updatedSession);
-
-        if (!mounted) return;
-        setState(() {
-          _session = updatedSession;
-          _hasChanged = true;
-        });
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Session renommée avec succès')),
-        );
-      } catch (e) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Erreur lors du renommage: $e')));
-      }
+      await renameSession(
+        context: context,
+        session: _session,
+        newName: newName,
+        onSuccess: (updatedSession) {
+          setState(() {
+            _session = updatedSession;
+            _hasChanged = true;
+          });
+        },
+      );
     }
   }
 
   void _showRedoConfirmationDialog() async {
-    final confirmed = await showConfirmationDialog(
+    final confirmed = await showDialog<bool>(
       context: context,
-      title: 'Refaire la session',
-      content:
-          'Êtes-vous sûr de vouloir refaire cette session ? La vidéo et les données GPS seront supprimées.',
-      confirmText: 'CONFIRMER',
+      builder: (context) => ConfirmDialog(
+        title: 'Refaire la session',
+        content:
+            'Êtes-vous sûr de vouloir refaire cette session ? La vidéo et les données GPS seront supprimées.',
+        confirmText: 'CONFIRMER',
+        onConfirm: () {},
+      ),
     );
-
     if (confirmed == true) {
       if (!mounted) return;
       final navigator = Navigator.of(context);
-
-      try {
-        // Delete video file if exists
-        if (_session.videoPath != null &&
-            File(_session.videoPath!).existsSync()) {
-          await File(_session.videoPath!).delete();
-        }
-
-        // Clear GPS data and video path in the session
-        final updatedSession = _session.copy(
-          gpsData: [],
-          videoPath: null,
-          duration: Duration.zero,
-          gpsPoints: 0,
-        );
-
-        // Update directly in database
-        await DatabaseHelper.instance.updateSession(updatedSession);
-
-        if (!mounted) return;
-        setState(() {
-          _session = updatedSession;
-          _videoController?.dispose();
-          _videoController = null;
-          _hasChanged = true;
-        });
-        _calculateSessionData(); // Recalculate stats
-
-        // Navigate to SessionCompletionPage to redo the session
-        final Session? newSessionData = await navigator.push<Session>(
-          MaterialPageRoute(
-            builder: (context) => SessionCompletionPage(
-              session: updatedSession,
-              flutterMapBuilder: widget.flutterMapBuilder,
-            ),
-          ),
-        );
-        if (newSessionData != null && mounted) {
+      await redoSession(
+        session: _session,
+        onAfterRedo: (updatedSession) async {
+          if (!mounted) return;
           setState(() {
-            _session = newSessionData;
-            _calculateSessionData();
-            if (_session.videoPath != null &&
-                File(_session.videoPath!).existsSync()) {
-              _videoController = VideoPlayerController.file(
-                File(_session.videoPath!),
-              );
-              _initializeVideoPlayerFuture = _videoController!.initialize();
-            } else {
-              _videoController?.dispose();
-              _videoController = null;
-            }
+            _session = updatedSession;
+            _videoController?.dispose();
+            _videoController = null;
+            _hasChanged = true;
           });
-        }
-      } catch (e) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur lors de la réinitialisation: $e')),
-        );
-      }
+          _calculateSessionData();
+          // Naviguer vers la page de complétion pour refaire la session
+          final Session? newSessionData = await navigator.push<Session>(
+            MaterialPageRoute(
+              builder: (context) => SessionCompletionPage(
+                session: updatedSession,
+                flutterMapBuilder: widget.flutterMapBuilder,
+              ),
+            ),
+          );
+          if (newSessionData != null && mounted) {
+            setState(() {
+              _session = newSessionData;
+              _calculateSessionData();
+              if (_session.videoPath != null &&
+                  File(_session.videoPath!).existsSync()) {
+                _videoController = VideoPlayerController.file(
+                  File(_session.videoPath!),
+                );
+                _initializeVideoPlayerFuture = _videoController!.initialize();
+              } else {
+                _videoController?.dispose();
+                _videoController = null;
+              }
+            });
+          }
+        },
+      );
     }
   }
 
   Future<void> _exportSessionData() async {
-    final sessionData = {
-      'id': _session.id,
-      'projectId': _session.projectId,
-      'name': _session.name,
-      'duration': _session.duration.inMilliseconds,
-      'gpsPointsCount': _session.gpsPoints,
-      'videoPath': _session.videoPath,
-      'gpsData': _session.gpsData.map((gpsPoint) => gpsPoint.toMap()).toList(),
-    };
-
-    try {
-      final response = await http.post(
-        Uri.parse('http://192.168.1.10:5160/api/Sessions'),
-        headers: <String, String>{
-          'Content-Type': 'application/json; charset=UTF-8',
-        },
-        body: jsonEncode(sessionData),
-      );
-
-      if (!mounted) return;
-      if (response.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Session exportée avec succès !')),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              "Échec de l'exportation de la session: ${response.statusCode}",
-            ),
-          ),
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Erreur lors de l'exportation de la session: $e"),
-        ),
-      );
-    }
+    await exportSessionData(
+      context: context,
+      client: http.Client(),
+      baseUrl: 'http://192.168.1.10:5160',
+      session: _session,
+    );
   }
 }

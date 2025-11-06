@@ -16,10 +16,10 @@ class SessionEntity extends Equatable {
   final bool exported;
 
   /// Unique identifier for the session (null for new sessions)
-  final int? id;
+  final String id;
 
   /// ID of the project this session belongs to
-  final int projectId;
+  final String projectId;
 
   /// Name/title of the session (required, non-empty)
   final String name;
@@ -52,7 +52,7 @@ class SessionEntity extends Equatable {
   final DateTime? updatedAt;
 
   const SessionEntity({
-    this.id,
+    required this.id,
     required this.projectId,
     required this.name,
     this.duration = Duration.zero,
@@ -69,8 +69,8 @@ class SessionEntity extends Equatable {
 
   /// Creates a copy of this entity with the given fields replaced
   SessionEntity copyWith({
-    int? id,
-    int? projectId,
+    String? id,
+    String? projectId,
     String? name,
     Duration? duration,
     int? gpsPoints,
@@ -116,7 +116,6 @@ class SessionEntity extends Equatable {
   bool get isCompleted => startTime != null && endTime != null;
 
   /// Business rule: Check if the session is new (not yet persisted)
-  bool get isNew => id == null;
 
   @override
   List<Object?> get props => [

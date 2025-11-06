@@ -11,14 +11,14 @@ abstract class SessionRepository {
   ///
   /// Returns [Right(SessionEntity)] on success
   /// Returns [Left(Failure)] on error (DatabaseFailure, NotFoundFailure)
-  Future<Either<Failure, SessionEntity>> getSession(int id);
+  Future<Either<Failure, SessionEntity>> getSession(String id);
 
   /// Retrieves all sessions for a specific project
   ///
   /// Returns [Right(List<SessionEntity>)] on success (empty list if no sessions)
   /// Returns [Left(Failure)] on error (DatabaseFailure)
   Future<Either<Failure, List<SessionEntity>>> getSessionsForProject(
-    int projectId,
+    String projectId,
   );
 
   /// Retrieves all sessions from the database
@@ -43,17 +43,17 @@ abstract class SessionRepository {
   ///
   /// Returns [Right(void)] on success
   /// Returns [Left(Failure)] on error (DatabaseFailure, NotFoundFailure)
-  Future<Either<Failure, void>> deleteSession(int id);
+  Future<Either<Failure, void>> deleteSession(String id);
 
   /// Gets the count of sessions for a specific project
   ///
   /// Returns [Right(int)] with the count on success
   /// Returns [Left(Failure)] on error (DatabaseFailure)
-  Future<Either<Failure, int>> getSessionCountForProject(int projectId);
+  Future<Either<Failure, int>> getSessionCountForProject(String projectId);
 
   /// Checks if a session exists by its ID
   ///
   /// Returns [Right(bool)] true if exists, false otherwise
   /// Returns [Left(Failure)] on error (DatabaseFailure)
-  Future<Either<Failure, bool>> sessionExists(int id);
+  Future<Either<Failure, bool>> sessionExists(String id);
 }

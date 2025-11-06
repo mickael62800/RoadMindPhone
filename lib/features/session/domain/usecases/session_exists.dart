@@ -20,7 +20,7 @@ class SessionExists implements UseCase<bool, SessionExistsParams> {
 
 /// Parameters for the SessionExists use case
 class SessionExistsParams extends Equatable {
-  final int id;
+  final String id;
 
   const SessionExistsParams({required this.id});
 

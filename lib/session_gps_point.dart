@@ -1,8 +1,9 @@
+import 'package:uuid/uuid.dart';
 import 'package:latlong2/latlong.dart';
 
 class SessionGpsPoint {
-  int? id;
-  final int sessionId;
+  final String id;
+  final String sessionId;
   final double latitude;
   final double longitude;
   final double? altitude;
@@ -12,7 +13,7 @@ class SessionGpsPoint {
   final int videoTimestampMs;
 
   SessionGpsPoint({
-    this.id,
+    String? id,
     required this.sessionId,
     required this.latitude,
     required this.longitude,
@@ -21,7 +22,7 @@ class SessionGpsPoint {
     this.heading,
     required this.timestamp,
     required this.videoTimestampMs,
-  });
+  }) : id = id ?? const Uuid().v4();
 
   // Convert a SessionGpsPoint into a Map.
   Map<String, dynamic> toMap() {
@@ -41,8 +42,8 @@ class SessionGpsPoint {
   // Convert a Map into a SessionGpsPoint.
   factory SessionGpsPoint.fromMap(Map<String, dynamic> map) {
     return SessionGpsPoint(
-      id: map['id'],
-      sessionId: map['sessionId'],
+      id: map['id'] as String,
+      sessionId: map['sessionId'] as String,
       latitude: map['latitude'],
       longitude: map['longitude'],
       altitude: map['altitude'],

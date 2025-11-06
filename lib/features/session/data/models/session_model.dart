@@ -47,8 +47,8 @@ class SessionModel extends SessionEntity {
   factory SessionModel.fromMap(Map<String, dynamic> map) {
     final now = DateTime.now();
     return SessionModel(
-      id: map['id'] as int?,
-      projectId: map['projectId'] as int,
+      id: map['id'] as String,
+      projectId: map['projectId'] as String,
       name: map['name'] as String,
       duration: Duration(seconds: map['duration'] as int),
       gpsPoints: map['gpsPoints'] as int,
@@ -80,8 +80,8 @@ class SessionModel extends SessionEntity {
   ) {
     final now = DateTime.now();
     return SessionModel(
-      id: map['id'] as int?,
-      projectId: map['projectId'] as int,
+      id: map['id'] as String,
+      projectId: map['projectId'] as String,
       name: map['name'] as String,
       duration: Duration(seconds: map['duration'] as int),
       gpsPoints: map['gpsPoints'] as int,
@@ -146,8 +146,8 @@ class SessionModel extends SessionEntity {
   /// Creates a copy of this model with updated fields
   @override
   SessionModel copyWith({
-    int? id,
-    int? projectId,
+    String? id,
+    String? projectId,
     String? name,
     Duration? duration,
     int? gpsPoints,

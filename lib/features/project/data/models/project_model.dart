@@ -8,14 +8,22 @@ import 'package:roadmindphone/features/project/domain/entities/project_entity.da
 /// (JSON for API, Map for SQLite).
 class ProjectModel extends ProjectEntity {
   const ProjectModel({
-    super.id,
-    required super.title,
-    super.description,
-    super.sessionCount = 0,
-    super.duration = Duration.zero,
-    required super.createdAt,
-    super.updatedAt,
-  });
+    required String id,
+    required String title,
+    String? description,
+    int sessionCount = 0,
+    Duration duration = Duration.zero,
+    required DateTime createdAt,
+    DateTime? updatedAt,
+  }) : super(
+         id: id,
+         title: title,
+         description: description,
+         sessionCount: sessionCount,
+         duration: duration,
+         createdAt: createdAt,
+         updatedAt: updatedAt,
+       );
 
   /// Creates a ProjectModel from a ProjectEntity
   factory ProjectModel.fromEntity(ProjectEntity entity) {
@@ -33,7 +41,7 @@ class ProjectModel extends ProjectEntity {
   /// Creates a ProjectModel from a Map (from database)
   factory ProjectModel.fromMap(DataMap map) {
     return ProjectModel(
-      id: map['id'] as int?,
+      id: map['id'] as String,
       title: map['title'] as String,
       description: map['description'] as String?,
       sessionCount: map['session_count'] as int? ?? 0,
@@ -48,7 +56,7 @@ class ProjectModel extends ProjectEntity {
   /// Creates a ProjectModel from JSON
   factory ProjectModel.fromJson(DataMap json) {
     return ProjectModel(
-      id: json['id'] as int?,
+      id: json['id'] as String,
       title: json['title'] as String,
       description: json['description'] as String?,
       sessionCount: json['sessionCount'] as int? ?? 0,
@@ -63,7 +71,7 @@ class ProjectModel extends ProjectEntity {
   /// Converts this model to a Map (for database)
   DataMap toMap() {
     return {
-      if (id != null) 'id': id,
+      'id': id,
       'title': title,
       if (description != null) 'description': description,
       'session_count': sessionCount,
@@ -76,7 +84,7 @@ class ProjectModel extends ProjectEntity {
   /// Converts this model to JSON
   DataMap toJson() {
     return {
-      if (id != null) 'id': id,
+      'id': id,
       'title': title,
       if (description != null) 'description': description,
       'sessionCount': sessionCount,
@@ -89,7 +97,7 @@ class ProjectModel extends ProjectEntity {
   /// Creates a copy of this model with updated fields
   @override
   ProjectModel copyWith({
-    int? id,
+    String? id,
     String? title,
     String? description,
     int? sessionCount,

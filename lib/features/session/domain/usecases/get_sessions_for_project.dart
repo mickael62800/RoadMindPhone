@@ -24,7 +24,7 @@ class GetSessionsForProject
 
 /// Parameters for GetSessionsForProject use case
 class GetSessionsForProjectParams extends Equatable {
-  final int projectId;
+  final String projectId;
 
   const GetSessionsForProjectParams({required this.projectId});
 

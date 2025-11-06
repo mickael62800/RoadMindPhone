@@ -1,11 +1,38 @@
 import 'package:sqflite/sqflite.dart';
 import 'dart:async';
-
 import 'package:path/path.dart';
 import 'package:roadmindphone/project.dart';
 import 'package:roadmindphone/session.dart';
+import 'package:roadmindphone/session_gps_point.dart';
+// Imports déjà présents plus bas, supprimés ici pour éviter les doublons
 
 class DatabaseHelper {
+  // CRUD pour les points GPS
+  Future<void> insertSessionGpsPoint(SessionGpsPoint point) async {
+    final db = await instance.database;
+    await db.insert('session_gps_points', point.toMap());
+  }
+
+  Future<List<SessionGpsPoint>> getSessionGpsPoints(String sessionId) async {
+    final db = await instance.database;
+    final result = await db.query(
+      'session_gps_points',
+      where: 'sessionId = ?',
+      whereArgs: [sessionId],
+      orderBy: 'timestamp ASC',
+    );
+    return result.map((e) => SessionGpsPoint.fromMap(e)).toList();
+  }
+
+  Future<void> deleteSessionGpsPoints(String sessionId) async {
+    final db = await instance.database;
+    await db.delete(
+      'session_gps_points',
+      where: 'sessionId = ?',
+      whereArgs: [sessionId],
+    );
+  }
+
   static DatabaseHelper? _instance;
   static Database? _database;
 
@@ -60,7 +87,7 @@ class DatabaseHelper {
   }
 
   Future _createDB(Database db, int version) async {
-    const idType = 'INTEGER PRIMARY KEY AUTOINCREMENT';
+    const idType = 'TEXT PRIMARY KEY';
     const textType = 'TEXT NOT NULL';
     const integerType = 'INTEGER NOT NULL';
 
@@ -79,7 +106,7 @@ CREATE TABLE projects (
     await db.execute('''
 CREATE TABLE sessions (
   id $idType,
-  projectId $integerType,
+  projectId TEXT NOT NULL,
   name $textType,
   duration $integerType,
   gpsPoints $integerType,
@@ -92,26 +119,40 @@ CREATE TABLE sessions (
   FOREIGN KEY (projectId) REFERENCES projects (id) ON DELETE CASCADE
 )
 ''');
+
+    await db.execute('''
+CREATE TABLE session_gps_points (
+  id TEXT PRIMARY KEY,
+  sessionId TEXT NOT NULL,
+  latitude REAL NOT NULL,
+  longitude REAL NOT NULL,
+  altitude REAL,
+  speed REAL,
+  heading REAL,
+  timestamp TEXT NOT NULL,
+  videoTimestampMs INTEGER,
+  FOREIGN KEY (sessionId) REFERENCES sessions (id) ON DELETE CASCADE
+)
+''');
   }
 
   Future<Project> create(Project project) async {
     final db = await instance.database;
     final projectMap = project.toMap();
-    // Ajouter created_at automatiquement si non présent
     if (!projectMap.containsKey('created_at')) {
       projectMap['created_at'] = DateTime.now().toIso8601String();
     }
-    final id = await db.insert('projects', projectMap);
-    return project.copy(id: id);
+    await db.insert('projects', projectMap);
+    return project;
   }
 
   Future<Session> createSession(Session session) async {
     final db = await instance.database;
-    final id = await db.insert('sessions', session.toMap());
-    return session.copy(id: id);
+    await db.insert('sessions', session.toMap());
+    return session;
   }
 
-  Future<Project> readProject(int id) async {
+  Future<Project> readProject(String id) async {
     final db = await instance.database;
     final maps = await db.query(
       'projects',
@@ -122,7 +163,9 @@ CREATE TABLE sessions (
 
     if (maps.isNotEmpty) {
       final projectMap = maps.first;
-      final sessions = await readAllSessionsForProject(projectMap['id'] as int);
+      final sessions = await readAllSessionsForProject(
+        projectMap['id'] as String,
+      );
       final duration = sessions.fold<Duration>(
         Duration.zero,
         (previousValue, element) => previousValue + element.duration,
@@ -137,7 +180,7 @@ CREATE TABLE sessions (
     }
   }
 
-  Future<Session> readSession(int id) async {
+  Future<Session> readSession(String id) async {
     final db = await instance.database;
     final maps = await db.query('sessions', where: 'id = ?', whereArgs: [id]);
 
@@ -155,7 +198,7 @@ CREATE TABLE sessions (
 
     final projects = <Project>[];
     for (final map in result) {
-      final sessions = await readAllSessionsForProject(map['id'] as int);
+      final sessions = await readAllSessionsForProject(map['id'] as String);
       final duration = sessions.fold<Duration>(
         Duration.zero,
         (previousValue, element) => previousValue + element.duration,
@@ -172,7 +215,7 @@ CREATE TABLE sessions (
     return projects;
   }
 
-  Future<List<Session>> readAllSessionsForProject(int projectId) async {
+  Future<List<Session>> readAllSessionsForProject(String projectId) async {
     final db = await instance.database;
     const orderBy = 'name ASC';
     final result = await db.query(
@@ -205,12 +248,12 @@ CREATE TABLE sessions (
     );
   }
 
-  Future<int> delete(int id) async {
+  Future<int> delete(String id) async {
     final db = await instance.database;
     return await db.delete('projects', where: 'id = ?', whereArgs: [id]);
   }
 
-  Future<int> deleteSession(int id) async {
+  Future<int> deleteSession(String id) async {
     final db = await instance.database;
     return await db.delete('sessions', where: 'id = ?', whereArgs: [id]);
   }

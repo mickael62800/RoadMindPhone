@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:roadmindphone/src/ui/atoms/atoms.dart';
-import 'package:roadmindphone/src/ui/molecules/molecules.dart';
+import 'package:roadmindphone/src/ui/widgets/settings/settings_form.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -59,28 +58,10 @@ class _SettingsPageState extends State<SettingsPage> {
         title: const Text('Settings'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SettingsTextField(
-              controller: _serverAddressController,
-              labelText: 'Database Server Address',
-            ),
-            const SizedBox(height: 16.0),
-            SettingsTextField(
-              controller: _portController,
-              labelText: 'Database Port',
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 24.0),
-            PrimaryButton(
-              onPressed: _saveSettings,
-              text: 'Sauver',
-            ),
-          ],
-        ),
+      body: SettingsForm(
+        serverAddressController: _serverAddressController,
+        portController: _portController,
+        onSave: _saveSettings,
       ),
     );
   }

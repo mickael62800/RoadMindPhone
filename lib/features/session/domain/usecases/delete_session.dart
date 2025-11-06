@@ -20,7 +20,7 @@ class DeleteSession implements UseCase<void, DeleteSessionParams> {
 
 /// Parameters for the DeleteSession use case
 class DeleteSessionParams extends Equatable {
-  final int id;
+  final String id;
 
   const DeleteSessionParams({required this.id});
 

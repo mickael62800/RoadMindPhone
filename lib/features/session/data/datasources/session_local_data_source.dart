@@ -9,13 +9,13 @@ abstract class SessionLocalDataSource {
   ///
   /// Throws [DatabaseException] if operation fails
   /// Throws [NotFoundException] if session doesn't exist
-  Future<SessionModel> getSession(int id);
+  Future<SessionModel> getSession(String id);
 
   /// Retrieves all sessions for a specific project from the database
   ///
   /// Returns empty list if no sessions found
   /// Throws [DatabaseException] if operation fails
-  Future<List<SessionModel>> getSessionsForProject(int projectId);
+  Future<List<SessionModel>> getSessionsForProject(String projectId);
 
   /// Retrieves all sessions from the database
   ///
@@ -40,16 +40,16 @@ abstract class SessionLocalDataSource {
   ///
   /// Throws [DatabaseException] if operation fails
   /// Throws [NotFoundException] if session doesn't exist
-  Future<void> deleteSession(int id);
+  Future<void> deleteSession(String id);
 
   /// Gets the count of sessions for a specific project
   ///
   /// Throws [DatabaseException] if operation fails
-  Future<int> getSessionCountForProject(int projectId);
+  Future<int> getSessionCountForProject(String projectId);
 
   /// Checks if a session exists by ID
   ///
   /// Returns true if exists, false otherwise
   /// Throws [DatabaseException] if operation fails
-  Future<bool> sessionExists(int id);
+  Future<bool> sessionExists(String id);
 }

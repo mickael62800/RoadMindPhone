@@ -17,7 +17,7 @@ class SessionRepositoryImpl implements SessionRepository {
   SessionRepositoryImpl({required this.localDataSource});
 
   @override
-  Future<Either<Failure, SessionEntity>> getSession(int id) async {
+  Future<Either<Failure, SessionEntity>> getSession(String id) async {
     try {
       final model = await localDataSource.getSession(id);
       return Right(model.toEntity());
@@ -32,7 +32,7 @@ class SessionRepositoryImpl implements SessionRepository {
 
   @override
   Future<Either<Failure, List<SessionEntity>>> getSessionsForProject(
-    int projectId,
+    String projectId,
   ) async {
     try {
       final models = await localDataSource.getSessionsForProject(projectId);
@@ -101,7 +101,7 @@ class SessionRepositoryImpl implements SessionRepository {
   }
 
   @override
-  Future<Either<Failure, void>> deleteSession(int id) async {
+  Future<Either<Failure, void>> deleteSession(String id) async {
     try {
       await localDataSource.deleteSession(id);
       return const Right(null);
@@ -115,7 +115,9 @@ class SessionRepositoryImpl implements SessionRepository {
   }
 
   @override
-  Future<Either<Failure, int>> getSessionCountForProject(int projectId) async {
+  Future<Either<Failure, int>> getSessionCountForProject(
+    String projectId,
+  ) async {
     try {
       final count = await localDataSource.getSessionCountForProject(projectId);
       return Right(count);
@@ -127,7 +129,7 @@ class SessionRepositoryImpl implements SessionRepository {
   }
 
   @override
-  Future<Either<Failure, bool>> sessionExists(int id) async {
+  Future<Either<Failure, bool>> sessionExists(String id) async {
     try {
       final exists = await localDataSource.sessionExists(id);
       return Right(exists);

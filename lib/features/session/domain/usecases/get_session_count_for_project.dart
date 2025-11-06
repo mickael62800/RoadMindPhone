@@ -23,7 +23,7 @@ class GetSessionCountForProject
 
 /// Parameters for the GetSessionCountForProject use case
 class GetSessionCountForProjectParams extends Equatable {
-  final int projectId;
+  final String projectId;
 
   const GetSessionCountForProjectParams({required this.projectId});
 

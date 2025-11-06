@@ -33,14 +33,14 @@ class ProjectLocalDataSourceImpl implements ProjectLocalDataSource {
       final id = await db.insert(_tableName, map);
 
       // Return the project with the generated ID
-      return project.copyWith(id: id);
+      return project.copyWith(id: id.toString());
     } catch (e) {
       throw DatabaseException('Failed to create project: ${e.toString()}');
     }
   }
 
   @override
-  Future<ProjectModel> getProject(int id) async {
+  Future<ProjectModel> getProject(String id) async {
     try {
       final db = await databaseHelper.database;
       final result = await db.query(
@@ -88,7 +88,7 @@ class ProjectLocalDataSourceImpl implements ProjectLocalDataSource {
       // Calculate session_count and duration dynamically for each project
       final projects = <ProjectModel>[];
       for (final map in result) {
-        final projectId = map['id'] as int;
+        final projectId = map['id'] as String;
 
         // Get all sessions for this project
         final sessions = await db.query(
@@ -143,7 +143,7 @@ class ProjectLocalDataSourceImpl implements ProjectLocalDataSource {
   }
 
   @override
-  Future<void> deleteProject(int id) async {
+  Future<void> deleteProject(String id) async {
     try {
       final db = await databaseHelper.database;
       final rowsAffected = await db.delete(
@@ -192,7 +192,7 @@ class ProjectLocalDataSourceImpl implements ProjectLocalDataSource {
   }
 
   @override
-  Future<bool> projectExists(int id) async {
+  Future<bool> projectExists(String id) async {
     try {
       final db = await databaseHelper.database;
       final result = await db.query(

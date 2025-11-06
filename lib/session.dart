@@ -1,9 +1,10 @@
+import 'package:uuid/uuid.dart';
 import 'dart:convert';
 import 'package:roadmindphone/session_gps_point.dart';
 
 class Session {
-  final int? id;
-  final int projectId;
+  final String id;
+  final String projectId;
   final String name;
   final Duration duration;
   final int gpsPoints;
@@ -15,7 +16,7 @@ class Session {
   final bool exported;
 
   Session({
-    this.id,
+    String? id,
     required this.projectId,
     required this.name,
     required this.duration,
@@ -26,11 +27,11 @@ class Session {
     this.endTime,
     this.notes,
     this.exported = false,
-  });
+  }) : id = id ?? const Uuid().v4();
 
   Session copy({
-    int? id,
-    int? projectId,
+    String? id,
+    String? projectId,
     String? name,
     Duration? duration,
     int? gpsPoints,
@@ -55,8 +56,8 @@ class Session {
   );
 
   static Session fromMap(Map<String, dynamic> map) => Session(
-    id: map['id'] as int?,
-    projectId: map['projectId'] as int,
+    id: map['id'] as String,
+    projectId: map['projectId'] as String,
     name: map['name'] as String,
     duration: Duration(milliseconds: map['duration'] as int),
     gpsPoints: map['gpsPoints'] as int,

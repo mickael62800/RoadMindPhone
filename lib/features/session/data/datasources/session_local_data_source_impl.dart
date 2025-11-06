@@ -13,7 +13,7 @@ class SessionLocalDataSourceImpl implements SessionLocalDataSource {
   SessionLocalDataSourceImpl({required this.databaseHelper});
 
   @override
-  Future<SessionModel> getSession(int id) async {
+  Future<SessionModel> getSession(String id) async {
     try {
       final session = await databaseHelper.readSession(id);
       return _convertToModel(session);
@@ -26,7 +26,7 @@ class SessionLocalDataSourceImpl implements SessionLocalDataSource {
   }
 
   @override
-  Future<List<SessionModel>> getSessionsForProject(int projectId) async {
+  Future<List<SessionModel>> getSessionsForProject(String projectId) async {
     try {
       final sessions = await databaseHelper.readAllSessionsForProject(
         projectId,
@@ -76,16 +76,12 @@ class SessionLocalDataSourceImpl implements SessionLocalDataSource {
   @override
   Future<void> updateSession(SessionModel session) async {
     try {
-      // Validate session
-      if (session.id == null) {
-        throw ValidationException('Session ID is required for update');
-      }
       if (!session.hasValidName) {
         throw ValidationException('Session name is required');
       }
 
       // Check if session exists
-      final exists = await sessionExists(session.id!);
+      final exists = await sessionExists(session.id);
       if (!exists) {
         throw NotFoundException('Session with ID ${session.id} not found');
       }
@@ -102,7 +98,7 @@ class SessionLocalDataSourceImpl implements SessionLocalDataSource {
   }
 
   @override
-  Future<void> deleteSession(int id) async {
+  Future<void> deleteSession(String id) async {
     try {
       // Check if session exists
       final exists = await sessionExists(id);
@@ -120,7 +116,7 @@ class SessionLocalDataSourceImpl implements SessionLocalDataSource {
   }
 
   @override
-  Future<int> getSessionCountForProject(int projectId) async {
+  Future<int> getSessionCountForProject(String projectId) async {
     try {
       final sessions = await getSessionsForProject(projectId);
       return sessions.length;
@@ -130,7 +126,7 @@ class SessionLocalDataSourceImpl implements SessionLocalDataSource {
   }
 
   @override
-  Future<bool> sessionExists(int id) async {
+  Future<bool> sessionExists(String id) async {
     try {
       final db = await databaseHelper.database;
       final result = await db.query(

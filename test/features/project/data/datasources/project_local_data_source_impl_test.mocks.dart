@@ -6,10 +6,11 @@
 import 'dart:async' as _i5;
 
 import 'package:mockito/mockito.dart' as _i1;
-import 'package:mockito/src/dummies.dart' as _i7;
+import 'package:mockito/src/dummies.dart' as _i8;
 import 'package:roadmindphone/database_helper.dart' as _i6;
 import 'package:roadmindphone/project.dart' as _i3;
 import 'package:roadmindphone/session.dart' as _i4;
+import 'package:roadmindphone/session_gps_point.dart' as _i7;
 import 'package:sqflite/sqflite.dart' as _i2;
 
 // ignore_for_file: type=lint
@@ -75,6 +76,36 @@ class MockDatabaseHelper extends _i1.Mock implements _i6.DatabaseHelper {
           as _i5.Future<_i2.Database>);
 
   @override
+  _i5.Future<void> insertSessionGpsPoint(_i7.SessionGpsPoint? point) =>
+      (super.noSuchMethod(
+            Invocation.method(#insertSessionGpsPoint, [point]),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
+          )
+          as _i5.Future<void>);
+
+  @override
+  _i5.Future<List<_i7.SessionGpsPoint>> getSessionGpsPoints(
+    String? sessionId,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#getSessionGpsPoints, [sessionId]),
+            returnValue: _i5.Future<List<_i7.SessionGpsPoint>>.value(
+              <_i7.SessionGpsPoint>[],
+            ),
+          )
+          as _i5.Future<List<_i7.SessionGpsPoint>>);
+
+  @override
+  _i5.Future<void> deleteSessionGpsPoints(String? sessionId) =>
+      (super.noSuchMethod(
+            Invocation.method(#deleteSessionGpsPoints, [sessionId]),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
+          )
+          as _i5.Future<void>);
+
+  @override
   _i5.Future<_i3.Project> create(_i3.Project? project) =>
       (super.noSuchMethod(
             Invocation.method(#create, [project]),
@@ -98,7 +129,7 @@ class MockDatabaseHelper extends _i1.Mock implements _i6.DatabaseHelper {
           as _i5.Future<_i4.Session>);
 
   @override
-  _i5.Future<_i3.Project> readProject(int? id) =>
+  _i5.Future<_i3.Project> readProject(String? id) =>
       (super.noSuchMethod(
             Invocation.method(#readProject, [id]),
             returnValue: _i5.Future<_i3.Project>.value(
@@ -108,7 +139,7 @@ class MockDatabaseHelper extends _i1.Mock implements _i6.DatabaseHelper {
           as _i5.Future<_i3.Project>);
 
   @override
-  _i5.Future<_i4.Session> readSession(int? id) =>
+  _i5.Future<_i4.Session> readSession(String? id) =>
       (super.noSuchMethod(
             Invocation.method(#readSession, [id]),
             returnValue: _i5.Future<_i4.Session>.value(
@@ -126,7 +157,7 @@ class MockDatabaseHelper extends _i1.Mock implements _i6.DatabaseHelper {
           as _i5.Future<List<_i3.Project>>);
 
   @override
-  _i5.Future<List<_i4.Session>> readAllSessionsForProject(int? projectId) =>
+  _i5.Future<List<_i4.Session>> readAllSessionsForProject(String? projectId) =>
       (super.noSuchMethod(
             Invocation.method(#readAllSessionsForProject, [projectId]),
             returnValue: _i5.Future<List<_i4.Session>>.value(<_i4.Session>[]),
@@ -150,7 +181,7 @@ class MockDatabaseHelper extends _i1.Mock implements _i6.DatabaseHelper {
           as _i5.Future<int>);
 
   @override
-  _i5.Future<int> delete(int? id) =>
+  _i5.Future<int> delete(String? id) =>
       (super.noSuchMethod(
             Invocation.method(#delete, [id]),
             returnValue: _i5.Future<int>.value(0),
@@ -158,7 +189,7 @@ class MockDatabaseHelper extends _i1.Mock implements _i6.DatabaseHelper {
           as _i5.Future<int>);
 
   @override
-  _i5.Future<int> deleteSession(int? id) =>
+  _i5.Future<int> deleteSession(String? id) =>
       (super.noSuchMethod(
             Invocation.method(#deleteSession, [id]),
             returnValue: _i5.Future<int>.value(0),
@@ -186,7 +217,7 @@ class MockDatabase extends _i1.Mock implements _i2.Database {
   String get path =>
       (super.noSuchMethod(
             Invocation.getter(#path),
-            returnValue: _i7.dummyValue<String>(this, Invocation.getter(#path)),
+            returnValue: _i8.dummyValue<String>(this, Invocation.getter(#path)),
           )
           as String);
 
@@ -220,8 +251,8 @@ class MockDatabase extends _i1.Mock implements _i2.Database {
       (super.noSuchMethod(
             Invocation.method(#transaction, [action], {#exclusive: exclusive}),
             returnValue:
-                _i7.ifNotNull(
-                  _i7.dummyValueOrNull<T>(
+                _i8.ifNotNull(
+                  _i8.dummyValueOrNull<T>(
                     this,
                     Invocation.method(
                       #transaction,
@@ -249,8 +280,8 @@ class MockDatabase extends _i1.Mock implements _i2.Database {
       (super.noSuchMethod(
             Invocation.method(#readTransaction, [action]),
             returnValue:
-                _i7.ifNotNull(
-                  _i7.dummyValueOrNull<T>(
+                _i8.ifNotNull(
+                  _i8.dummyValueOrNull<T>(
                     this,
                     Invocation.method(#readTransaction, [action]),
                   ),
@@ -268,8 +299,8 @@ class MockDatabase extends _i1.Mock implements _i2.Database {
       (super.noSuchMethod(
             Invocation.method(#devInvokeMethod, [method, arguments]),
             returnValue:
-                _i7.ifNotNull(
-                  _i7.dummyValueOrNull<T>(
+                _i8.ifNotNull(
+                  _i8.dummyValueOrNull<T>(
                     this,
                     Invocation.method(#devInvokeMethod, [method, arguments]),
                   ),
@@ -291,8 +322,8 @@ class MockDatabase extends _i1.Mock implements _i2.Database {
       (super.noSuchMethod(
             Invocation.method(#devInvokeSqlMethod, [method, sql, arguments]),
             returnValue:
-                _i7.ifNotNull(
-                  _i7.dummyValueOrNull<T>(
+                _i8.ifNotNull(
+                  _i8.dummyValueOrNull<T>(
                     this,
                     Invocation.method(#devInvokeSqlMethod, [
                       method,

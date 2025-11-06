@@ -11,7 +11,7 @@ abstract class SessionEvent extends Equatable {
 
 /// Event to load a single session by ID
 class LoadSessionEvent extends SessionEvent {
-  final int id;
+  final String id;
 
   const LoadSessionEvent(this.id);
 
@@ -21,7 +21,7 @@ class LoadSessionEvent extends SessionEvent {
 
 /// Event to load all sessions for a specific project
 class LoadSessionsForProjectEvent extends SessionEvent {
-  final int projectId;
+  final String projectId;
 
   const LoadSessionsForProjectEvent(this.projectId);
 
@@ -56,7 +56,7 @@ class UpdateSessionEvent extends SessionEvent {
 
 /// Event to delete a session
 class DeleteSessionEvent extends SessionEvent {
-  final int id;
+  final String id;
 
   const DeleteSessionEvent(this.id);
 
@@ -66,7 +66,7 @@ class DeleteSessionEvent extends SessionEvent {
 
 /// Event to get session count for a project
 class GetSessionCountEvent extends SessionEvent {
-  final int projectId;
+  final String projectId;
 
   const GetSessionCountEvent(this.projectId);
 
@@ -76,7 +76,7 @@ class GetSessionCountEvent extends SessionEvent {
 
 /// Event to check if a session exists
 class CheckSessionExistsEvent extends SessionEvent {
-  final int id;
+  final String id;
 
   const CheckSessionExistsEvent(this.id);
 

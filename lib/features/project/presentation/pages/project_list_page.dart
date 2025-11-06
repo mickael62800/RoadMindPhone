@@ -1,3 +1,4 @@
+import 'package:roadmindphone/services/project_service/project_stats.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:roadmindphone/features/project/presentation/bloc/bloc.dart';
@@ -19,9 +20,46 @@ class ProjectListPage extends StatefulWidget {
 }
 
 class _ProjectListPageState extends State<ProjectListPage> {
+  // Affiche une boîte de dialogue pour ajouter un projet
+  void _showAddProjectDialog() async {
+    final TextEditingController controller = TextEditingController();
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Créer un projet'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(hintText: 'Nom du projet'),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(controller.text),
+            child: const Text('Créer'),
+          ),
+        ],
+      ),
+    );
+    if (result != null && result.trim().isNotEmpty) {
+      context.read<ProjectBloc>().add(CreateProjectEvent(title: result.trim()));
+    }
+  }
+
+  // Ajout d'un utilitaire pour formater la durée
+  String _formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    String twoDigitMinutes = twoDigits(duration.inMinutes.remainder(60));
+    String twoDigitSeconds = twoDigits(duration.inSeconds.remainder(60));
+    return "${twoDigits(duration.inHours)}:$twoDigitMinutes:$twoDigitSeconds";
+  }
+
   int _totalGpsPoints = 0;
   int _totalVideos = 0;
-  Map<int, bool> _projectWarnings = {};
+  Map<String, bool> _projectWarnings = {};
 
   @override
   void initState() {
@@ -32,62 +70,15 @@ class _ProjectListPageState extends State<ProjectListPage> {
 
   /// Load additional statistics (GPS points and videos count)
   Future<void> _loadAdditionalStats(List<ProjectEntity> projects) async {
-    try {
-      int gpsPoints = 0;
-      int videos = 0;
-      Map<int, bool> warnings = {};
-
-      for (final project in projects) {
-        final sessions = await DatabaseHelper.instance
-            .readAllSessionsForProject(project.id!);
-        bool hasIncomplete = false;
-        for (final session in sessions) {
-          gpsPoints += session.gpsPoints;
-          if (session.videoPath != null && session.videoPath!.isNotEmpty) {
-            videos++;
-          }
-          // Check if session is incomplete (no video or no GPS points)
-          if (session.videoPath == null ||
-              session.videoPath!.isEmpty ||
-              session.gpsPoints == 0) {
-            hasIncomplete = true;
-          }
-        }
-        warnings[project.id!] = hasIncomplete;
-      }
-
-      if (mounted) {
-        setState(() {
-          _totalGpsPoints = gpsPoints;
-          _totalVideos = videos;
-          _projectWarnings = warnings;
-        });
-      }
-    } catch (e) {
-      debugPrint('Error loading additional stats: $e');
+    final stats = await computeProjectStats(projects);
+    if (mounted) {
+      setState(() {
+        _totalGpsPoints = stats['gpsPoints'] as int;
+        _totalVideos = stats['videos'] as int;
+        _projectWarnings = stats['warnings'] as Map<String, bool>;
+      });
     }
-  }
-
-  /// Format duration to HH:MM:SS
-  String _formatDuration(Duration duration) {
-    String twoDigits(int n) => n.toString().padLeft(2, '0');
-    String twoDigitMinutes = twoDigits(duration.inMinutes.remainder(60));
-    String twoDigitSeconds = twoDigits(duration.inSeconds.remainder(60));
-    return '${twoDigits(duration.inHours)}:$twoDigitMinutes:$twoDigitSeconds';
-  }
-
-  /// Show dialog to add a new project
-  void _showAddProjectDialog() async {
-    final String? title = await showAddItemDialog(
-      context: context,
-      title: 'Nouveau Projet',
-      hintText: 'Titre du projet',
-    );
-
-    if (title != null && title.isNotEmpty) {
-      if (!mounted) return;
-      context.read<ProjectBloc>().add(CreateProjectEvent(title: title));
-    }
+    // Ignore errors for stats
   }
 
   /// Build an info row with icon, label and value

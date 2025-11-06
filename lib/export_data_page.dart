@@ -1,10 +1,12 @@
+import 'package:roadmindphone/services/export_service/mark_sessions_exported.dart';
 import 'package:flutter/material.dart';
 import 'package:roadmindphone/features/project/domain/entities/project_entity.dart';
 import 'package:roadmindphone/session.dart';
 import 'package:http/http.dart' as http;
 
-import 'package:roadmindphone/services/export_service.dart';
-import 'package:roadmindphone/database_helper.dart';
+import 'package:roadmindphone/services/export_service/check_project_exists_by_name.dart';
+import 'package:roadmindphone/services/export_service/create_project.dart';
+import 'package:roadmindphone/services/export_service/create_sessions.dart';
 import 'package:roadmindphone/core/api_base_url.dart';
 
 class ExportDataPage extends StatefulWidget {
@@ -24,53 +26,35 @@ class ExportDataPage extends StatefulWidget {
 }
 
 class _ExportDataPageState extends State<ExportDataPage> {
+  Future<void> _checkProjectExistsByName() async {
+    if (_baseUrl == null) return;
+    final exists = await checkProjectExistsByName(
+      client: _client,
+      baseUrl: _baseUrl!,
+      projectName: widget.project.title,
+    );
+    setState(() {
+      _projectExists = exists;
+    });
+  }
+
   bool? _projectExists;
   late final http.Client _client;
-  ExportService? _exportService;
+  String? _baseUrl;
 
   @override
   void initState() {
     super.initState();
     _client = widget.httpClient ?? http.Client();
-    _initExportServiceAndCheck();
+    _initBaseUrlAndCheck();
   }
 
-  Future<void> _initExportServiceAndCheck() async {
+  Future<void> _initBaseUrlAndCheck() async {
     final baseUrl = await getApiBaseUrlFromSettings();
     setState(() {
-      _exportService = ExportService(client: _client, baseUrl: baseUrl);
+      _baseUrl = baseUrl;
     });
-    if (mounted) {
-      _checkProjectExistsByName();
-    }
-  }
-
-  Future<void> _checkProjectExistsByName() async {
-    if (_exportService == null) return;
-    try {
-      final exists = await _exportService!.checkProjectExistsByName(
-        widget.project.title,
-      );
-      setState(() {
-        _projectExists = exists;
-      });
-    } catch (e) {
-      debugPrint(
-        'Erreur lors de la vérification de l\'existence du projet: $e',
-      );
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Erreur lors de la vérification de l\'existence du projet: $e',
-            ),
-          ),
-        );
-      }
-      setState(() {
-        _projectExists = false;
-      });
-    }
+    await _checkProjectExistsByName();
   }
 
   @override
@@ -196,14 +180,16 @@ class _ExportDataPageState extends State<ExportDataPage> {
   }
 
   Future<void> _createProject() async {
-    if (_exportService == null) return;
+    if (_baseUrl == null) return;
     try {
-      await _exportService!.createProject(widget.project, widget.sessions);
+      await createProject(
+        client: _client,
+        baseUrl: _baseUrl!,
+        project: widget.project,
+        sessions: widget.sessions,
+      );
       // Marquer les sessions comme exportées dans la base locale
-      for (final session in widget.sessions) {
-        final exportedSession = session.copy(exported: true);
-        await DatabaseHelper.instance.updateSession(exportedSession);
-      }
+      await markSessionsExported(widget.sessions);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Projet créé avec succès !')),
@@ -224,9 +210,16 @@ class _ExportDataPageState extends State<ExportDataPage> {
   }
 
   Future<void> _addSessions() async {
-    if (_exportService == null) return;
+    if (_baseUrl == null) return;
     try {
-      await _exportService!.createSessions(widget.project.id!, widget.sessions);
+      await createSessions(
+        client: _client,
+        baseUrl: _baseUrl!,
+        projectName: widget.project.title,
+        sessions: widget.sessions,
+      );
+      // Marquer les sessions comme exportées dans la base locale
+      await markSessionsExported(widget.sessions);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Sessions ajoutées avec succès !')),

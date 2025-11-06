@@ -1,3 +1,4 @@
+import 'package:uuid/uuid.dart';
 import 'package:dartz/dartz.dart';
 import 'package:roadmindphone/core/error/exceptions.dart';
 import 'package:roadmindphone/core/error/failures.dart';
@@ -26,6 +27,7 @@ class ProjectRepositoryImpl implements ProjectRepository {
     try {
       // Create a new ProjectModel (without ID, will be generated)
       final projectModel = ProjectModel(
+        id: const Uuid().v4(),
         title: title,
         description: description,
         createdAt: DateTime.now(),
@@ -44,7 +46,7 @@ class ProjectRepositoryImpl implements ProjectRepository {
   }
 
   @override
-  Future<Either<Failure, ProjectEntity>> getProject(int id) async {
+  Future<Either<Failure, ProjectEntity>> getProject(String id) async {
     try {
       final result = await localDataSource.getProject(id);
       return Right(result);
@@ -74,7 +76,8 @@ class ProjectRepositoryImpl implements ProjectRepository {
 
   @override
   Future<Either<Failure, ProjectEntity>> updateProject(
-      ProjectEntity project) async {
+    ProjectEntity project,
+  ) async {
     try {
       // Convert entity to model
       final projectModel = ProjectModel.fromEntity(project);
@@ -86,8 +89,7 @@ class ProjectRepositoryImpl implements ProjectRepository {
     } on DatabaseException catch (e) {
       // Check if it's a "not found" error
       if (e.message.contains('not found')) {
-        return Left(
-            NotFoundFailure('Project with id ${project.id} not found'));
+        return Left(NotFoundFailure('Project with id ${project.id} not found'));
       }
       return Left(DatabaseFailure(e.message));
     } on Exception catch (e) {
@@ -96,7 +98,7 @@ class ProjectRepositoryImpl implements ProjectRepository {
   }
 
   @override
-  Future<Either<Failure, void>> deleteProject(int id) async {
+  Future<Either<Failure, void>> deleteProject(String id) async {
     try {
       await localDataSource.deleteProject(id);
       return const Right(null);
@@ -125,7 +127,8 @@ class ProjectRepositoryImpl implements ProjectRepository {
 
   @override
   Future<Either<Failure, List<ProjectEntity>>> searchProjects(
-      String query) async {
+    String query,
+  ) async {
     try {
       final result = await localDataSource.searchProjects(query);
       // Convert List<ProjectModel> to List<ProjectEntity>
@@ -138,7 +141,7 @@ class ProjectRepositoryImpl implements ProjectRepository {
   }
 
   @override
-  Future<Either<Failure, bool>> projectExists(int id) async {
+  Future<Either<Failure, bool>> projectExists(String id) async {
     try {
       final result = await localDataSource.projectExists(id);
       return Right(result);

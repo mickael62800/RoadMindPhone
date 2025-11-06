@@ -1,9 +1,13 @@
+import 'package:roadmindphone/src/ui/widgets/project/sessions_header.dart';
+import 'package:roadmindphone/src/ui/widgets/project/project_sessions_list.dart';
+import 'package:roadmindphone/src/ui/widgets/project/project_info_card.dart';
+import 'package:roadmindphone/services/session_service/create_session_for_project.dart';
+import 'package:roadmindphone/services/project_service/read_all_sessions_for_project.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:roadmindphone/features/project/presentation/bloc/bloc.dart';
 import 'package:roadmindphone/features/project/domain/entities/project_entity.dart';
 import 'package:roadmindphone/src/ui/molecules/molecules.dart';
-import 'package:roadmindphone/database_helper.dart';
 import 'package:roadmindphone/session.dart';
 import 'package:roadmindphone/export_data_page.dart';
 import 'package:roadmindphone/session_completion_page.dart';
@@ -26,7 +30,6 @@ class ProjectDetailPage extends StatefulWidget {
 class _ProjectDetailPageState extends State<ProjectDetailPage> {
   late ProjectEntity _project;
   late Future<List<Session>> _sessionsFuture;
-  bool _isRefreshingProject = false;
 
   @override
   void initState() {
@@ -38,25 +41,14 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
   /// Refresh the sessions list and reload project data
   void _refreshSessions() {
     setState(() {
-      _sessionsFuture = DatabaseHelper.instance.readAllSessionsForProject(
-        _project.id!,
-      );
-      _isRefreshingProject = true;
+      _sessionsFuture = readAllSessionsForProject(_project.id);
     });
 
     // Reload project data to update session count and duration
-    context.read<ProjectBloc>().add(GetProjectEvent(projectId: _project.id!));
+    context.read<ProjectBloc>().add(GetProjectEvent(projectId: _project.id));
   }
 
   /// Update project data when bloc state changes
-  void _handleProjectLoaded(ProjectEntity project) {
-    if (_isRefreshingProject && mounted) {
-      setState(() {
-        _project = project;
-        _isRefreshingProject = false;
-      });
-    }
-  }
 
   /// Format duration to HH:MM:SS
   String _formatDuration(Duration duration) {
@@ -112,7 +104,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
     if (confirmed == true) {
       if (!mounted) return;
 
-      projectBloc.add(DeleteProjectEvent(projectId: _project.id!));
+      projectBloc.add(DeleteProjectEvent(projectId: _project.id));
 
       // Return to previous screen after a short delay
       await Future.delayed(const Duration(milliseconds: 500));
@@ -129,10 +121,8 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
     final navigator = Navigator.of(context);
 
     try {
-      // Get sessions from DatabaseHelper for export
-      final sessions = await DatabaseHelper.instance.readAllSessionsForProject(
-        _project.id!,
-      );
+      // Utiliser le service pour obtenir les sessions du projet
+      final sessions = await readAllSessionsForProject(_project.id);
 
       if (!mounted) return;
 
@@ -169,14 +159,10 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
           'DEBUG: Creating session with name: $name, projectId: ${_project.id}',
         );
 
-        // Create session via DatabaseHelper for immediate result
-        final createdSession = await DatabaseHelper.instance.createSession(
-          Session(
-            projectId: _project.id!,
-            name: name,
-            duration: const Duration(),
-            gpsPoints: 0,
-          ),
+        // Utiliser le service dédié pour créer la session
+        final createdSession = await createSessionForProject(
+          projectId: _project.id,
+          name: name,
         );
 
         print('DEBUG: Session created with id: ${createdSession.id}');
@@ -244,104 +230,21 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
       ),
       body: BlocListener<ProjectBloc, ProjectState>(
         listener: (context, state) {
-          // Update project when loaded after refresh
-          if (state is ProjectLoaded) {
-            _handleProjectLoaded(state.project);
-          }
-          // Show snackbar for operation success
-          if (state is ProjectOperationSuccess) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text(state.message)));
-          }
-          // Show snackbar for errors
-          if (state is ProjectError) {
-            if (_isRefreshingProject) {
-              setState(() {
-                _isRefreshingProject = false;
-              });
-            }
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
+          // ...existing code...
         },
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Project Info Card
-              Card(
-                elevation: 4,
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Informations du projet',
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      const SizedBox(height: 16),
-                      _buildInfoRow(Icons.folder, 'Titre', _project.title),
-                      if (_project.description != null) ...[
-                        const SizedBox(height: 8),
-                        _buildInfoRow(
-                          Icons.description,
-                          'Description',
-                          _project.description!,
-                        ),
-                      ],
-                      const SizedBox(height: 8),
-                      _buildInfoRow(
-                        Icons.event_note,
-                        'Sessions',
-                        '${_project.sessionCount}',
-                      ),
-                      const SizedBox(height: 8),
-                      _buildInfoRow(
-                        Icons.timer,
-                        'Durée totale',
-                        _formatDuration(_project.duration),
-                      ),
-                      const SizedBox(height: 8),
-                      _buildInfoRow(
-                        Icons.calendar_today,
-                        'Créé le',
-                        _formatDate(_project.createdAt),
-                      ),
-                      if (_project.updatedAt != null) ...[
-                        const SizedBox(height: 8),
-                        _buildInfoRow(
-                          Icons.update,
-                          'Modifié le',
-                          _formatDate(_project.updatedAt!),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
+              ProjectInfoCard(
+                project: _project,
+                formatDuration: _formatDuration,
+                formatDate: _formatDate,
               ),
               const SizedBox(height: 16),
               // Sessions section
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Sessions',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  ElevatedButton.icon(
-                    onPressed: _showAddSessionDialog,
-                    icon: const Icon(Icons.add),
-                    label: const Text('Nouvelle session'),
-                  ),
-                ],
-              ),
+              SessionsHeader(onAddSession: _showAddSessionDialog),
               const SizedBox(height: 8),
               Expanded(
                 child: FutureBuilder<List<Session>>(
@@ -350,7 +253,6 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(child: CircularProgressIndicator());
                     }
-
                     if (snapshot.hasError) {
                       return Center(
                         child: Text(
@@ -359,71 +261,21 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
                         ),
                       );
                     }
-
                     final sessions = snapshot.data ?? [];
-
-                    if (sessions.isEmpty) {
-                      return const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(16.0),
-                          child: Text(
-                            'Aucune session pour le moment.',
-                            style: TextStyle(fontSize: 14, color: Colors.grey),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      );
-                    }
-
-                    return ListView.builder(
-                      itemCount: sessions.length,
-                      itemBuilder: (context, index) {
-                        final session = sessions[index];
-                        return Card(
-                          margin: const EdgeInsets.symmetric(
-                            vertical: 4,
-                            horizontal: 0,
-                          ),
-                          child: ListTile(
-                            leading: session.exported == true
-                                ? const Icon(
-                                    Icons.cloud_done,
-                                    color: Colors.green,
-                                  )
-                                : const Icon(
-                                    Icons.cloud_upload,
-                                    color: Colors.grey,
-                                  ),
-                            title: Text(session.name),
-                            subtitle: Text(
-                              'Durée: ${_formatDuration(session.duration)} | GPS: ${session.gpsPoints} points',
-                            ),
-                            trailing: session.videoPath != null
-                                ? const Icon(
-                                    Icons.check_circle,
-                                    color: Colors.green,
-                                  )
-                                : const Icon(
-                                    Icons.warning,
-                                    color: Colors.orange,
-                                  ),
-                            onTap: () async {
-                              // Navigate to session detail page
-                              final result = await Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      SessionIndexPage(session: session),
-                                ),
-                              );
-
-                              // Refresh sessions list if session was modified or deleted
-                              if (result == true) {
-                                _refreshSessions();
-                              }
-                            },
+                    return ProjectSessionsList(
+                      sessions: sessions,
+                      formatDuration: _formatDuration,
+                      onSessionTap: (session) async {
+                        final result = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                SessionIndexPage(session: session),
                           ),
                         );
+                        if (result == true) {
+                          _refreshSessions();
+                        }
                       },
                     );
                   },
@@ -433,18 +285,6 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
           ),
         ),
       ),
-    );
-  }
-
-  /// Build an info row with icon, label and value
-  Widget _buildInfoRow(IconData icon, String label, String value) {
-    return Row(
-      children: [
-        Icon(icon, size: 20, color: Colors.grey),
-        const SizedBox(width: 8),
-        Text('$label: ', style: const TextStyle(fontWeight: FontWeight.bold)),
-        Expanded(child: Text(value, overflow: TextOverflow.ellipsis)),
-      ],
     );
   }
 

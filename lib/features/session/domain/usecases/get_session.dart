@@ -21,7 +21,7 @@ class GetSession implements UseCase<SessionEntity, GetSessionParams> {
 
 /// Parameters for GetSession use case
 class GetSessionParams extends Equatable {
-  final int id;
+  final String id;
 
   const GetSessionParams({required this.id});
 

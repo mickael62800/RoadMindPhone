@@ -19,8 +19,9 @@ class DeleteProject implements VoidUseCase<DeleteProjectParams> {
 }
 
 /// Parameters for deleting a project
+
 class DeleteProjectParams extends Equatable {
-  final int id;
+  final String id;
 
   const DeleteProjectParams(this.id);
 

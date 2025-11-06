@@ -53,7 +53,7 @@ class MockProjectLocalDataSource extends _i1.Mock
           as _i4.Future<_i2.ProjectModel>);
 
   @override
-  _i4.Future<_i2.ProjectModel> getProject(int? id) =>
+  _i4.Future<_i2.ProjectModel> getProject(String? id) =>
       (super.noSuchMethod(
             Invocation.method(#getProject, [id]),
             returnValue: _i4.Future<_i2.ProjectModel>.value(
@@ -86,7 +86,7 @@ class MockProjectLocalDataSource extends _i1.Mock
           as _i4.Future<_i2.ProjectModel>);
 
   @override
-  _i4.Future<void> deleteProject(int? id) =>
+  _i4.Future<void> deleteProject(String? id) =>
       (super.noSuchMethod(
             Invocation.method(#deleteProject, [id]),
             returnValue: _i4.Future<void>.value(),
@@ -113,7 +113,7 @@ class MockProjectLocalDataSource extends _i1.Mock
           as _i4.Future<List<_i2.ProjectModel>>);
 
   @override
-  _i4.Future<bool> projectExists(int? id) =>
+  _i4.Future<bool> projectExists(String? id) =>
       (super.noSuchMethod(
             Invocation.method(#projectExists, [id]),
             returnValue: _i4.Future<bool>.value(false),

@@ -11,8 +11,8 @@ import 'package:equatable/equatable.dart';
 /// - Description is optional
 /// - Sessions can be associated with a project
 class ProjectEntity extends Equatable {
-  /// Unique identifier for the project (null for new projects)
-  final int? id;
+  /// Unique identifier for the project (GUID)
+  final String id;
 
   /// Title of the project (required, non-empty)
   final String title;
@@ -33,7 +33,7 @@ class ProjectEntity extends Equatable {
   final DateTime? updatedAt;
 
   const ProjectEntity({
-    this.id,
+    required this.id,
     required this.title,
     this.description,
     this.sessionCount = 0,
@@ -44,7 +44,7 @@ class ProjectEntity extends Equatable {
 
   /// Creates a copy of this entity with the given fields replaced
   ProjectEntity copyWith({
-    int? id,
+    String? id,
     String? title,
     String? description,
     int? sessionCount,
@@ -70,7 +70,6 @@ class ProjectEntity extends Equatable {
   bool get hasSessions => sessionCount > 0;
 
   /// Business rule: Check if the project is new (not yet persisted)
-  bool get isNew => id == null;
 
   @override
   List<Object?> get props => [

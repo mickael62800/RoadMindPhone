@@ -16,7 +16,7 @@ abstract class ProjectLocalDataSource {
   ///
   /// Returns the project if found
   /// Throws [DatabaseException] if not found or on error
-  Future<ProjectModel> getProject(int id);
+  Future<ProjectModel> getProject(String id);
 
   /// Get all projects
   ///
@@ -34,7 +34,7 @@ abstract class ProjectLocalDataSource {
   /// Delete a project by its ID
   ///
   /// Throws [DatabaseException] if not found or on error
-  Future<void> deleteProject(int id);
+  Future<void> deleteProject(String id);
 
   /// Get projects count
   ///
@@ -53,5 +53,5 @@ abstract class ProjectLocalDataSource {
   ///
   /// Returns true if exists, false otherwise
   /// Throws [DatabaseException] on error
-  Future<bool> projectExists(int id);
+  Future<bool> projectExists(String id);
 }

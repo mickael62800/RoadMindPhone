@@ -1,3 +1,4 @@
+import 'package:uuid/uuid.dart';
 import 'package:roadmindphone/session.dart';
 
 /// Legacy Project class for backward compatibility
@@ -9,7 +10,7 @@ import 'package:roadmindphone/session.dart';
 ///
 /// New code should use ProjectEntity from the Clean Architecture.
 class Project {
-  final int? id;
+  final String id;
   final String title;
   final String? description;
   final int sessionCount;
@@ -17,16 +18,16 @@ class Project {
   final List<Session>? sessions;
 
   Project({
-    this.id,
+    String? id,
     required this.title,
     this.description,
     this.sessionCount = 0,
     this.duration = Duration.zero,
     this.sessions,
-  });
+  }) : id = id ?? const Uuid().v4();
 
   Project copy({
-    int? id,
+    String? id,
     String? title,
     String? description,
     int? sessionCount,
@@ -42,7 +43,7 @@ class Project {
   );
 
   static Project fromMap(Map<String, dynamic> map) => Project(
-    id: map['id'] as int?,
+    id: map['id'] as String,
     title: map['title'] as String,
     description: map['description'] as String?,
   );

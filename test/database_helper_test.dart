@@ -32,7 +32,7 @@ void main() {
       expect(createdProject.id, isNotNull);
       expect(createdProject.title, 'Test Project');
 
-      final readProject = await dbHelper.readProject(createdProject.id!);
+      final readProject = await dbHelper.readProject(createdProject.id);
       expect(readProject.id, createdProject.id);
       expect(readProject.title, 'Test Project');
     });
@@ -42,7 +42,7 @@ void main() {
       final createdProject = await dbHelper.create(project);
 
       final session = Session(
-        projectId: createdProject.id!,
+        projectId: createdProject.id,
         name: 'Test Session',
         duration: Duration(minutes: 10),
         gpsPoints: 100,
@@ -54,7 +54,7 @@ void main() {
       expect(createdSession.name, 'Test Session');
 
       final sessions = await dbHelper.readAllSessionsForProject(
-        createdProject.id!,
+        createdProject.id,
       );
       expect(sessions, hasLength(1));
       expect(sessions.first.name, 'Test Session');
@@ -69,7 +69,7 @@ void main() {
 
       expect(result, 1);
 
-      final readProject = await dbHelper.readProject(createdProject.id!);
+      final readProject = await dbHelper.readProject(createdProject.id);
       expect(readProject.title, 'Updated Project');
     });
 
@@ -77,10 +77,10 @@ void main() {
       final project = Project(title: 'Test Project');
       final createdProject = await dbHelper.create(project);
 
-      final result = await dbHelper.delete(createdProject.id!);
+      final result = await dbHelper.delete(createdProject.id);
       expect(result, 1);
 
-      expect(() => dbHelper.readProject(createdProject.id!), throwsException);
+      expect(() => dbHelper.readProject(createdProject.id), throwsException);
     });
 
     test('Read All Projects', () async {
@@ -98,7 +98,7 @@ void main() {
       final createdProject = await dbHelper.create(project);
 
       final session = Session(
-        projectId: createdProject.id!,
+        projectId: createdProject.id,
         name: 'Test Session',
         duration: Duration(minutes: 10),
         gpsPoints: 100,
@@ -114,7 +114,7 @@ void main() {
       expect(result, 1);
 
       final sessions = await dbHelper.readAllSessionsForProject(
-        createdProject.id!,
+        createdProject.id,
       );
       expect(sessions.first.name, 'Updated Session');
       expect(sessions.first.duration, Duration(minutes: 20));
@@ -125,18 +125,18 @@ void main() {
       final createdProject = await dbHelper.create(project);
 
       final session = Session(
-        projectId: createdProject.id!,
+        projectId: createdProject.id,
         name: 'Test Session',
         duration: Duration(minutes: 10),
         gpsPoints: 100,
       );
       final createdSession = await dbHelper.createSession(session);
 
-      final result = await dbHelper.deleteSession(createdSession.id!);
+      final result = await dbHelper.deleteSession(createdSession.id);
       expect(result, 1);
 
       final sessions = await dbHelper.readAllSessionsForProject(
-        createdProject.id!,
+        createdProject.id,
       );
       expect(sessions, isEmpty);
     });
@@ -147,7 +147,7 @@ void main() {
 
       await dbHelper.createSession(
         Session(
-          projectId: createdProject.id!,
+          projectId: createdProject.id,
           name: 'Session 1',
           duration: Duration(minutes: 10),
           gpsPoints: 10,
@@ -155,14 +155,14 @@ void main() {
       );
       await dbHelper.createSession(
         Session(
-          projectId: createdProject.id!,
+          projectId: createdProject.id,
           name: 'Session 2',
           duration: Duration(minutes: 20),
           gpsPoints: 20,
         ),
       );
 
-      final readProject = await dbHelper.readProject(createdProject.id!);
+      final readProject = await dbHelper.readProject(createdProject.id);
       expect(readProject.sessionCount, 2);
       expect(readProject.duration, Duration(minutes: 30));
 
@@ -180,7 +180,7 @@ void main() {
 
       final gpsData = [
         SessionGpsPoint(
-          sessionId: 0,
+          sessionId: 'test-guid',
           latitude: 48.8566,
           longitude: 2.3522,
           speed: 10.0,
@@ -188,7 +188,7 @@ void main() {
           videoTimestampMs: 0,
         ),
         SessionGpsPoint(
-          sessionId: 0,
+          sessionId: 'test-guid',
           latitude: 48.8580,
           longitude: 2.2945,
           speed: 15.0,
@@ -198,7 +198,7 @@ void main() {
       ];
 
       final session = Session(
-        projectId: createdProject.id!,
+        projectId: createdProject.id,
         name: 'Session with GPS',
         duration: const Duration(minutes: 15),
         gpsPoints: 2,
@@ -206,7 +206,7 @@ void main() {
       );
 
       final createdSession = await dbHelper.createSession(session);
-      final readSession = await dbHelper.readSession(createdSession.id!);
+      final readSession = await dbHelper.readSession(createdSession.id);
 
       expect(readSession.id, createdSession.id);
       expect(readSession.name, 'Session with GPS');
@@ -220,7 +220,7 @@ void main() {
       final createdProject = await dbHelper.create(project);
 
       final session = Session(
-        projectId: createdProject.id!,
+        projectId: createdProject.id,
         name: 'Session with Video',
         duration: const Duration(minutes: 20),
         gpsPoints: 50,
@@ -228,7 +228,7 @@ void main() {
       );
 
       final createdSession = await dbHelper.createSession(session);
-      final readSession = await dbHelper.readSession(createdSession.id!);
+      final readSession = await dbHelper.readSession(createdSession.id);
 
       expect(readSession.videoPath, '/path/to/video.mp4');
     });
@@ -239,7 +239,7 @@ void main() {
 
       await dbHelper.createSession(
         Session(
-          projectId: createdProject.id!,
+          projectId: createdProject.id,
           name: 'Session A',
           duration: const Duration(minutes: 5),
           gpsPoints: 10,
@@ -248,7 +248,7 @@ void main() {
 
       await dbHelper.createSession(
         Session(
-          projectId: createdProject.id!,
+          projectId: createdProject.id,
           name: 'Session B',
           duration: const Duration(minutes: 10),
           gpsPoints: 20,
@@ -257,7 +257,7 @@ void main() {
 
       await dbHelper.createSession(
         Session(
-          projectId: createdProject.id!,
+          projectId: createdProject.id,
           name: 'Session C',
           duration: const Duration(minutes: 15),
           gpsPoints: 30,
@@ -265,7 +265,7 @@ void main() {
       );
 
       final sessions = await dbHelper.readAllSessionsForProject(
-        createdProject.id!,
+        createdProject.id,
       );
       expect(sessions.length, 3);
       expect(sessions.map((s) => s.name).toList(), [
@@ -292,7 +292,7 @@ void main() {
       final createdProject = await dbHelper.create(project);
 
       final sessions = await dbHelper.readAllSessionsForProject(
-        createdProject.id!,
+        createdProject.id,
       );
       expect(sessions, isEmpty);
     });
@@ -302,14 +302,14 @@ void main() {
       final createdProject = await dbHelper.create(project);
 
       final session = Session(
-        projectId: createdProject.id!,
+        projectId: createdProject.id,
         name: 'Test Session',
         duration: const Duration(minutes: 10),
         gpsPoints: 5,
       );
       final createdSession = await dbHelper.createSession(session);
 
-      final readSession = await dbHelper.readSession(createdSession.id!);
+      final readSession = await dbHelper.readSession(createdSession.id);
       expect(readSession.id, createdSession.id);
       expect(readSession.name, 'Test Session');
       expect(readSession.projectId, createdProject.id);
@@ -320,7 +320,7 @@ void main() {
       final createdProject = await dbHelper.create(project);
 
       final session = Session(
-        projectId: createdProject.id!,
+        projectId: createdProject.id,
         name: 'Original Name',
         duration: const Duration(minutes: 5),
         gpsPoints: 3,
@@ -333,7 +333,7 @@ void main() {
       );
       await dbHelper.updateSession(updatedSession);
 
-      final readSession = await dbHelper.readSession(createdSession.id!);
+      final readSession = await dbHelper.readSession(createdSession.id);
       expect(readSession.name, 'Updated Name');
       expect(readSession.gpsPoints, 10);
     });
@@ -343,17 +343,17 @@ void main() {
       final createdProject = await dbHelper.create(project);
 
       final session = Session(
-        projectId: createdProject.id!,
+        projectId: createdProject.id,
         name: 'Session to Delete',
         duration: const Duration(minutes: 5),
         gpsPoints: 2,
       );
       final createdSession = await dbHelper.createSession(session);
 
-      await dbHelper.deleteSession(createdSession.id!);
+      await dbHelper.deleteSession(createdSession.id);
 
       final sessions = await dbHelper.readAllSessionsForProject(
-        createdProject.id!,
+        createdProject.id,
       );
       expect(sessions, isEmpty);
     });
@@ -467,7 +467,10 @@ void main() {
     test('readSession throws exception when not found', () async {
       await _cleanDatabase(dbHelper);
 
-      expect(() async => await dbHelper.readSession(999), throwsException);
+      expect(
+        () async => await dbHelper.readSession('not-found-guid'),
+        throwsException,
+      );
     });
 
     test('close database', () async {

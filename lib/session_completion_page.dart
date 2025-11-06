@@ -1,3 +1,4 @@
+import 'package:roadmindphone/services/session_service/finalize_session.dart';
 import 'dart:async';
 
 import 'package:camera/camera.dart';
@@ -9,10 +10,14 @@ import 'package:latlong2/latlong.dart';
 import 'package:roadmindphone/database_helper.dart';
 import 'package:roadmindphone/session.dart'; // Import Session class
 import 'package:roadmindphone/session_gps_point.dart';
+import 'package:roadmindphone/services/camera_service.dart';
+import 'package:roadmindphone/services/location_service.dart';
+import 'package:roadmindphone/src/ui/widgets/session/session_completion_app_bar.dart';
+import 'package:roadmindphone/src/ui/widgets/session/session_completion_loader.dart';
+import 'package:roadmindphone/src/ui/widgets/session/session_completion_layout.dart';
 import 'package:roadmindphone/features/session/presentation/bloc/session_bloc.dart';
 import 'package:roadmindphone/features/session/presentation/bloc/session_event.dart';
 import 'package:roadmindphone/session_index_page.dart'; // Import for SessionToEntity extension
-import 'package:permission_handler/permission_handler.dart';
 
 typedef FlutterMapBuilder =
     Widget Function({
@@ -60,13 +65,12 @@ class _SessionCompletionPageState extends State<SessionCompletionPage> {
   late Session _currentSession;
   LatLng? _currentLocation;
   CameraController? _cameraController;
-  List<CameraDescription>? _cameras;
+  // List<CameraDescription>? _cameras; // plus utilisé
   bool _isRecording = false;
   Timer? _timer;
   StreamSubscription<Position>? _positionStream;
   List<SessionGpsPoint> _gpsData = [];
   Duration _duration = Duration.zero;
-  late DatabaseHelper _databaseHelper;
   final MapController _mapController = MapController();
   bool _isInitializing = true;
 
@@ -76,14 +80,33 @@ class _SessionCompletionPageState extends State<SessionCompletionPage> {
     debugPrint(
       'DEBUG SessionCompletionPage: initState - session.gpsData.length = ${widget.session.gpsData.length}',
     );
-    _databaseHelper = widget.databaseHelper ?? DatabaseHelper.instance;
     // Initialiser la session courante
     _currentSession = widget.session;
     _initialize();
   }
 
   Future<void> _initialize() async {
-    await Future.wait([_initializeCamera(), _determinePosition()]);
+    // Initialisation caméra
+    final cameraResult = await initializeCamera(
+      existingController: widget.cameraController,
+      existingCameras: widget.cameras,
+      enableAudio: false,
+      context: context,
+    );
+    if (cameraResult.controller != null) {
+      _cameraController = cameraResult.controller;
+      setState(() {});
+    }
+
+    // Initialisation GPS
+    final locationResult = await initializeLocation(
+      sessionId: widget.session.id,
+      existingGpsData: widget.session.gpsData,
+    );
+    if (locationResult.currentLocation != null) {
+      _currentLocation = locationResult.currentLocation;
+      _gpsData = locationResult.gpsData;
+    }
 
     setState(() {
       _isInitializing = false;
@@ -96,8 +119,6 @@ class _SessionCompletionPageState extends State<SessionCompletionPage> {
         try {
           _mapController.move(_currentLocation!, 18.0);
           debugPrint('DEBUG: Map moved to current location');
-
-          // Forcer un léger mouvement pour déclencher le chargement des tuiles
           Future.delayed(const Duration(milliseconds: 100), () {
             try {
               _mapController.move(
@@ -121,110 +142,6 @@ class _SessionCompletionPageState extends State<SessionCompletionPage> {
         } catch (e) {
           debugPrint('DEBUG: Error moving map (initial): $e');
         }
-      });
-    }
-  }
-
-  Future<void> _determinePosition() async {
-    debugPrint('DEBUG: _determinePosition called');
-    bool serviceEnabled;
-    LocationPermission permission;
-
-    serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      debugPrint('DEBUG: Location services are disabled');
-      return Future.error('Location services are disabled.');
-    }
-
-    permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      debugPrint('DEBUG: Location permission denied, requesting');
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        debugPrint('DEBUG: Location permission denied after request');
-        return Future.error('Location permissions are denied');
-      }
-    }
-
-    if (permission == LocationPermission.deniedForever) {
-      debugPrint('DEBUG: Location permission denied forever');
-      return Future.error(
-        'Location permissions are permanently denied, we cannot request permissions.',
-      );
-    }
-
-    debugPrint('DEBUG: Getting current position...');
-    Position position = await Geolocator.getCurrentPosition();
-    debugPrint(
-      'DEBUG: Position obtained: ${position.latitude}, ${position.longitude}',
-    );
-
-    _currentLocation = LatLng(position.latitude, position.longitude);
-    debugPrint('DEBUG: _currentLocation set to $_currentLocation');
-    debugPrint(
-      'DEBUG: widget.session.gpsData.isEmpty = ${widget.session.gpsData.isEmpty}',
-    );
-
-    // Si la session n'a pas de points GPS (nouveau ou "Refaire"),
-    // ajouter un point GPS temporaire à la position actuelle pour centrer la carte
-    if (widget.session.gpsData.isEmpty) {
-      debugPrint('DEBUG: Creating temporary GPS point');
-      _gpsData = [
-        SessionGpsPoint(
-          sessionId: widget.session.id!,
-          latitude: position.latitude,
-          longitude: position.longitude,
-          speed: position.speed,
-          heading: position.heading,
-          timestamp: position.timestamp,
-          videoTimestampMs: 0,
-        ),
-      ];
-      debugPrint(
-        'DEBUG: Temporary GPS point created, _gpsData.length = ${_gpsData.length}',
-      );
-    } else {
-      debugPrint(
-        'DEBUG: Using existing GPS data, count = ${widget.session.gpsData.length}',
-      );
-      _gpsData = List.from(widget.session.gpsData);
-    }
-
-    debugPrint('DEBUG: GPS initialization completed');
-  }
-
-  Future<void> _initializeCamera() async {
-    if (widget.cameraController != null) {
-      _cameraController = widget.cameraController;
-      _cameras = widget.cameras;
-      if (_cameraController!.value.isInitialized) {
-        setState(() {});
-      }
-      return;
-    }
-
-    // Request microphone permission
-    var status = await Permission.microphone.request();
-    if (status.isDenied || status.isPermanentlyDenied) {
-      // Handle the case where permission is denied
-      // You might want to show a dialog or a message to the user
-      debugPrint("Microphone permission denied. Cannot record audio.");
-      return;
-    }
-
-    _cameras = await availableCameras();
-    if (_cameras != null && _cameras!.isNotEmpty) {
-      _cameraController = CameraController(
-        _cameras![0],
-        ResolutionPreset.medium,
-        enableAudio: false,
-      );
-
-      _cameraController!.initialize().then((_) {
-        if (!mounted) {
-          return;
-        }
-        setState(() {});
       });
     }
   }
@@ -261,7 +178,7 @@ class _SessionCompletionPageState extends State<SessionCompletionPage> {
               _currentLocation = LatLng(position.latitude, position.longitude);
               _gpsData.add(
                 SessionGpsPoint(
-                  sessionId: widget.session.id!,
+                  sessionId: widget.session.id,
                   latitude: position.latitude,
                   longitude: position.longitude,
                   speed: position.speed,
@@ -283,36 +200,23 @@ class _SessionCompletionPageState extends State<SessionCompletionPage> {
     final XFile? videoFile = await _cameraController?.stopVideoRecording();
     debugPrint('DEBUG: Video file path: ${videoFile?.path}');
 
-    _currentSession = _currentSession.copy(
+    // Utiliser le service pour finaliser et sauvegarder la session
+    final updatedSession = await finalizeSession(
+      session: _currentSession,
       duration: _duration,
-      gpsPoints: _gpsData.length,
       gpsData: _gpsData,
       videoPath: videoFile?.path,
       endTime: DateTime.now().toUtc(),
     );
-    final updatedSession = _currentSession;
 
-    debugPrint(
-      'DEBUG: Updated session - id: ${updatedSession.id}, duration: ${updatedSession.duration}, gpsPoints: ${updatedSession.gpsPoints}',
-    );
-
-    // Update via SessionBloc
+    // Mettre à jour via le BLoC pour la cohérence UI
     if (mounted) {
       try {
-        debugPrint('DEBUG: Updating session via BLoC and DatabaseHelper');
         final bloc = context.read<SessionBloc>();
-        // Convert to entity using the extension from session_index_page
         final entity = updatedSession.toEntity();
         bloc.add(UpdateSessionEvent(entity));
-
-        // Also update database directly for immediate consistency
-        await _databaseHelper.updateSession(updatedSession);
-        debugPrint('DEBUG: Session updated successfully in database');
       } catch (e) {
-        debugPrint('DEBUG: Error updating via BLoC, using fallback: $e');
-        // Fallback: update the database directly
-        await _databaseHelper.updateSession(updatedSession);
-        debugPrint('DEBUG: Session updated via fallback');
+        debugPrint('DEBUG: Error updating via BLoC: $e');
       }
     }
 
@@ -342,146 +246,47 @@ class _SessionCompletionPageState extends State<SessionCompletionPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Afficher un loader pendant l'initialisation
     if (_isInitializing) {
       return Scaffold(
-        appBar: AppBar(
-          title: Text(widget.session.name),
+        appBar: SessionCompletionAppBar(
+          title: widget.session.name,
+          info: '',
           backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         ),
-        body: const Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Initialisation en cours...'),
-            ],
-          ),
-        ),
+        body: const SessionCompletionLoader(),
       );
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.session.name),
+      appBar: SessionCompletionAppBar(
+        title: widget.session.name,
+        info:
+            'Durée: ${_formatDuration(_duration)} | GPS Points: ${_gpsData.length}',
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(30.0),
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Text(
-              'Durée: ${_formatDuration(_duration)} | GPS Points: ${_gpsData.length}',
-              style: const TextStyle(color: Colors.white),
-            ),
-          ),
-        ),
       ),
       body: SafeArea(
         child: OrientationBuilder(
           builder: (context, orientation) {
             final isLandscape = orientation == Orientation.landscape;
-            return isLandscape
-                ? _buildLandscapeLayout()
-                : _buildPortraitLayout();
+            return SessionCompletionLayout(
+              isLandscape: isLandscape,
+              currentLocation: _currentLocation,
+              gpsData: _gpsData,
+              cameraController: _cameraController,
+              isRecording: _isRecording,
+              onAction: () async {
+                if (_isRecording) {
+                  _stopRecording();
+                } else {
+                  await _startRecording();
+                }
+              },
+              flutterMapBuilder: widget.flutterMapBuilder,
+              mapController: _mapController,
+            );
           },
         ),
       ),
-    );
-  }
-
-  Widget _buildPortraitLayout() {
-    return Column(
-      key: const Key('portrait_layout'),
-      children: <Widget>[
-        Expanded(flex: 1, child: _buildMap()),
-        Expanded(flex: 2, child: _buildCameraPreview()),
-      ],
-    );
-  }
-
-  Widget _buildLandscapeLayout() {
-    return Row(
-      key: const Key('landscape_layout'),
-      children: <Widget>[
-        Expanded(flex: 1, child: _buildMap()),
-        Expanded(flex: 1, child: _buildCameraPreview()),
-      ],
-    );
-  }
-
-  Widget _buildMap() {
-    debugPrint('DEBUG _buildMap: _currentLocation = $_currentLocation');
-    debugPrint('DEBUG _buildMap: _gpsData.length = ${_gpsData.length}');
-
-    return _currentLocation == null
-        ? const Center(child: CircularProgressIndicator())
-        : widget.flutterMapBuilder(
-            mapController: _mapController,
-            options: MapOptions(
-              initialCenter: _currentLocation ?? const LatLng(50.42, 2.83),
-              initialZoom: 18.0,
-            ),
-            children: [
-              TileLayer(
-                urlTemplate:
-                    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-                subdomains: const ['a', 'b', 'c'],
-              ),
-              if (_currentLocation != null)
-                MarkerLayer(
-                  markers: [
-                    Marker(
-                      width: 80.0,
-                      height: 80.0,
-                      point: _currentLocation!,
-                      child: const Icon(
-                        Icons.location_on,
-                        color: Colors.red,
-                        size: 40.0,
-                      ),
-                    ),
-                  ],
-                ),
-              if (_gpsData.isNotEmpty)
-                PolylineLayer(
-                  polylines: [
-                    Polyline(
-                      points: _gpsData.map((p) => p.toLatLng()).toList(),
-                      strokeWidth: 4.0,
-                      color: Colors.blue,
-                    ),
-                  ],
-                ),
-            ],
-          );
-  }
-
-  Widget _buildCameraPreview() {
-    return Stack(
-      children: [
-        _cameraController != null && _cameraController!.value.isInitialized
-            ? CameraPreview(_cameraController!)
-            : Container(
-                color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                child: const Center(child: Text('No Camera Available')),
-              ),
-        Positioned(
-          bottom: 16.0,
-          left: 16.0,
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(minimumSize: const Size(120, 50)),
-            onPressed: () async {
-              if (_isRecording) {
-                _stopRecording();
-              } else {
-                await _startRecording();
-              }
-            },
-            child: Text(_isRecording ? 'Stop' : 'Go!'),
-          ),
-        ),
-      ],
     );
   }
 }

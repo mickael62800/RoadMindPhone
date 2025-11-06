@@ -1,5 +1,5 @@
 import 'package:roadmindphone/database_helper.dart';
-import 'package:roadmindphone/session.dart';
+import 'package:roadmindphone/services/session_service/create_session_for_project.dart';
 import 'package:roadmindphone/project.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -20,20 +20,16 @@ void main() async {
 
     // 2. Créer une session
     print('2. Création d\'une session...');
-    final session = await DatabaseHelper.instance.createSession(
-      Session(
-        projectId: project.id!,
-        name: 'Session Test',
-        duration: const Duration(minutes: 5),
-        gpsPoints: 10,
-      ),
+    final session = await createSessionForProject(
+      projectId: project.id,
+      name: 'Session Test',
     );
     print('✅ Session créée avec id: ${session.id}\n');
 
     // 3. Vérifier que la session est bien en base
     print('3. Lecture de toutes les sessions du projet...');
     final sessions = await DatabaseHelper.instance.readAllSessionsForProject(
-      project.id!,
+      project.id,
     );
     print('✅ Nombre de sessions trouvées: ${sessions.length}');
 
